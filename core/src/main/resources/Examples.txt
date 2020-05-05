@@ -1,0 +1,10 @@
+https://ru93q91hc7.execute-api.eu-west-2.amazonaws.com/dev/post-list
+
+https://sxwvlta5w1.execute-api.eu-west-2.amazonaws.com/dev/html
+
+https://api.therightnotes.org/g/post-list
+
+https://api.therightnotes.org/a/html
+
+http://localhost:8080/post-list
+

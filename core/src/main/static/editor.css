@@ -1,0 +1,36 @@
+.CodeMirror {
+	height: 600px;
+}
+
+ul.portrait-list {
+	list-style: none;
+}
+
+ul.portrait-list > li {
+	display: inline-block;
+	margin: 0;
+	padding: 0;
+}
+
+li > figure {
+	margin: 0;
+	padding: 0;
+}
+
+figure {
+	display: inline-block;
+}
+
+figcaption {
+	font-size: small;
+}
+
+#image-gallery {
+	height: 400px;
+	overflow: auto;
+}
+
+.file:hover {
+	text-decoration: underline;
+	cursor: pointer;
+}

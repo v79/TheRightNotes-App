@@ -1,0 +1,17 @@
+plugins {
+    id 'ws.osiris.project' version '1.5.0'
+}
+// For local testing the plugins block needs to be replaced with
+//
+//   buildscript {
+//       repositories {
+//           jcenter()
+//           mavenLocal()
+//       }
+//       dependencies {
+//           classpath 'ws.osiris:osiris-gradle-plugin:1.5.0'
+//       }
+//   }
+//   apply plugin: 'ws.osiris.project'
+
+defaultTasks 'generateProject'

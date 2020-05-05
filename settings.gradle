@@ -1,0 +1,6 @@
+rootProject.name = 'TheRightNotes-App'
+include ':TheRightNotes-App-core'
+include ':TheRightNotes-App-local-server'
+
+project(':TheRightNotes-App-core').projectDir = "$rootDir/core" as File
+project(':TheRightNotes-App-local-server').projectDir = "$rootDir/local-server" as File
