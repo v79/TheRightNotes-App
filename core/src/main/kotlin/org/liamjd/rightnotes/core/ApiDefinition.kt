@@ -7,6 +7,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
+import org.apache.http.HttpStatus
 import ws.osiris.core.Request
 import ws.osiris.core.api
 
@@ -27,7 +28,7 @@ val api = api<GitService> {
 					span(classes = "post-list-item") {
 						onClick = "loadMarkdownFile('${sourceFile.source}')"
 						title = "$kb kb"
-						+sourceFile.name.removePrefix("_")
+						+sourceFile.name.removePrefix("_").replace("'", "\\'")
 						if (sourceFile.draft) {
 							span(classes = "tag is-light draft") {
 								+"DRAFT"
@@ -43,11 +44,16 @@ val api = api<GitService> {
 	post("/load-markdown") { req ->
 		val fileToLoad = req.body<String>()
 		println("Loading markdown file $fileToLoad")
-		val markdown = loadMarkdownFile("v79", "rightnotes", "$fileToLoad", "master")
-		val json = Json(JsonConfiguration.Stable)
-		val jsonData = json.stringify(BasculePost.serializer(), markdown)
+		val markdown = loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
+		if (markdown.filename.isNotEmpty()) {
+			val json = Json(JsonConfiguration.Stable)
+			val jsonData = json.stringify(BasculePost.serializer(), markdown)
 
-		jsonData
+			jsonData
+		} else {
+			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+		}
+
 	}
 
 	post("/save-new-file") { req ->
@@ -56,8 +62,9 @@ val api = api<GitService> {
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
 		println(yamlPost)
 		// need to sanitise the file name?
+		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		// prepending "_" makes it a draft file
-		createNewFile("v79", "rightnotes", "sources/_${yamlPost.title}.md", "master", yamlPost, false)
+		createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
 		""
 	}
 

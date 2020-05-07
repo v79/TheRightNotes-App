@@ -15,10 +15,7 @@ class GitService : ComponentsProvider {
 	}
 	//user/reponame
 	fun getPostList(userName: String, repoName: String, path: String, branchRef: String): List<GHSourceFile> {
-		println("GIT_AUTH_TOKEN $GIT_AUTH_TOKEN")
-
 		val postList = mutableListOf<GHSourceFile>()
-
 		try {
 			val contentList = getGitHubFileList(userName, repoName, path, branchRef)
 			contentList.filter { it.name.endsWith(".md", true) }.forEach { postList.add(GHSourceFile(it.name, it.path, it.name.startsWith("_"), it.size)) }
@@ -49,6 +46,7 @@ class GitService : ComponentsProvider {
 	 * Load a file with the given [path]
 	 */
 	fun loadMarkdownFile(userName: String, repoName: String, path: String, branchRef: String): BasculePost {
+		println("Loading file '$path'")
 		try {
 			val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
 			val repo = github.getRepository("$userName/$repoName")
