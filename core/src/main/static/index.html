@@ -30,8 +30,9 @@
 					</p>
 					<div class="panel-block">
 						<div id="file-buttons control">
-							<a href="#" id="file-new" title="Create new post" class="button" onclick="newFile()"><span
-									class="mdi mdi-file-plus is-primary">New</span></a>
+							<a href="#" id="file-new" title="Create new post" class="button is-primary"
+							   onclick="newFile()"><span
+									class="mdi mdi-file-plus">New</span></a>
 						</div>
 					</div>
 					<div class="panel-block">
@@ -68,73 +69,109 @@
 					post</p>
 				<div id="editor">
 					<form id="form-md" class="is-hidden">
+
 						<div id="post-actions" class="level">
 							<div class="level-left">
-								<a href="#" id="btn-release-edit" class="button mdi mdi-file-document-edit">Edit</a>
+								<div class="level-item"></div>
 							</div>
 							<div class="level-right">
-								<a href="#" id="btn-release-draft" class="button mdi mdi-clipboard-check" title="Mark this as ready to be published, i.e. no longer a draft." onclick="releaseDraft();">Release Draft</a>
+								<div class="level-item">
+									<a href="#" id="btn-release-draft" class="button mdi mdi-clipboard-check"
+									   title="Mark this as ready to be published, i.e. no longer a draft."
+									   onclick="releaseDraft();">Release Draft</a>
+								</div>
 							</div>
 						</div>
+
 						<fieldset class="meta-data">
-							<div class="field is-horizontal">
-								<div class="field">
-									<div class="field-label"><label for="form-meta-title" class="label">Title</label>
+							<input type="hidden" name="path" id="form-meta-filepath"/>
+							<div class="level">
+								<div class="level-left">
+									<div class="level-item">
+										<div class="field is-horizontal is-grouped">
+											<div class="field-label is-normal">
+												<label class="label" for="form-meta-title">Title</label>
+											</div>
+											<div class="control">
+												<input type="text" name="title" id="form-meta-title"
+													   placeholder="title"
+													   required
+													   class="input"/>
+											</div>
+										</div>
 									</div>
-									<div class="control">
-										<input type="text" name="form-meta-title" id="form-meta-title"
-											   placeholder="title"
-											   required
-											   class="input" disabled/>
+									<div class="level-item">
+										<div class="field is-horizontal is-grouped">
+											<div class="field-label is-normal">
+												<label class="label" for="form-meta-slug">URL</label>
+											</div>
+											<div class="control">
+												<input type="text" name="slug" id="form-meta-slug"
+													   placeholder="url"
+													   title="The URL is needed when linking between pages, so cannot be easily changed"
+													   class="input" disabled/>
+											</div>
+										</div>
 									</div>
-								</div>
-								<div class="field">
-									<div class="field-label">
-										<label for="form-meta-slug" class="label">URL</label>
-									</div>
-									<div class="control">
-										<input type="text" name="form-meta-slug" id="form-meta-slug" placeholder="url"
-											   class="input" disabled/>
-									</div>
-								</div>
-							</div>
-							<div class="field"><label for="form-meta-summary" class="label">Front page summary</label>
-								<input type="text" name="form-meta-summary" id="form-meta-summary" placeholder="summary"
-									   class="input" disabled/>
-							</div>
-							<div class="field"><label for="form-meta-playlist" class="label">Spotify playlist</label>
-								<input type="text" name="form-meta-playlist" id="form-meta-playlist"
-									   placeholder="6sDTNORdmU5Mg7nO0We6q9" class="input" disabled/>
-							</div>
-
-							<div class="field is-horizontal">
-								<div class="field">
-									<div class="field-label"><label for="form-meta-composers"
-																	class="label">Composers</label>
-									</div>
-									<input type="text" name="form-meta-composers" id="form-meta-composers"
-										   placeholder="composers"
-										   class="input" disabled/>
-								</div>
-								<div class="field">
-									<div class="field-label">
-										<label for="form-meta-genres" class="label">Genres</label>
-									</div>
-									<input type="text" name="form-meta-genres" id="form-meta-genres"
-										   placeholder="genres"
-										   class="input" disabled/>
 								</div>
 							</div>
 
+
+							<div class="field">
+								<label for="form-meta-summary" class="label">Front page summary</label>
+								<input type="text" name="summary" id="form-meta-summary" placeholder="summary"
+									   class="input"/>
+							</div>
+							<div class="field">
+								<label for="form-meta-playlist" class="label">Spotify playlist</label>
+								<input type="text" name="playlist" id="form-meta-playlist"
+									   placeholder="6sDTNORdmU5Mg7nO0We6q9" class="input"/>
+							</div>
+
+
+							<div class="level">
+								<div class="level-left">
+									<div class="level-item">
+										<div class="field is-horizontal is-grouped">
+											<div class="field-label is-normal">
+												<label class="label" for="form-meta-genres">Genres</label>
+											</div>
+											<div class="control">
+												<input type="text" name="genres[]" id="form-meta-genres"
+													   placeholder="genres"
+													   class="input"/>
+											</div>
+										</div>
+									</div>
+									<div class="level-item">
+										<div class="field-label is-normal">
+											<label class="label" for="form-meta-composers">Composers</label>
+										</div>
+										<div class="control">
+											<input type="text" name="composers[]" id="form-meta-composers"
+												   placeholder="composers"
+												   class="input"/>
+										</div>
+									</div>
+								</div>
+								<div class="level-right">
+									<div class="level-item">
+										<a href="#" id="btn-save-and-update" class="button is-danger"><span
+												class="mdi mdi-content-save"
+												onclick="saveAndUpdate()">Save</span></a>
+									</div>
+								</div>
+							</div>
 						</fieldset>
 						<fieldset class="markdown-text">
 							<div class="field">
+								<label for="form-md-text" class="label">Text</label>
 								<textarea title="form-md-text" id="form-md-text"
+										  form="form-md"
 										  placeholder="Markdown goes here" cols="120"
 										  rows="30" class="textarea" ondrop="drop_handler(event)"
 										  ondragover="dragover_handler(event);">
 							</textarea></div>
-
 						</fieldset>
 					</form>
 				</div>
@@ -274,7 +311,11 @@
     var simplemde = new SimpleMDE({
         element: document.getElementById("form-md-text"),
         autofocus: true,
-        autosave: false,
+        autosave: {
+            enabled: true,
+            uniqueId: "formmdtext-rightnotes-body",
+            delay: 1000,
+        },
         spellChecker: false,
         blockStyles: {
             bold: "**",

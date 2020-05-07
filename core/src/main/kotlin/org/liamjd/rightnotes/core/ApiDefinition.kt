@@ -45,7 +45,7 @@ val api = api<GitService> {
 		val fileToLoad = req.body<String>()
 		println("Loading markdown file $fileToLoad")
 		val markdown = loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
-		if (markdown.filename.isNotEmpty()) {
+		if (markdown.path.isNotEmpty()) {
 			val json = Json(JsonConfiguration.Stable)
 			val jsonData = json.stringify(BasculePost.serializer(), markdown)
 
@@ -65,6 +65,16 @@ val api = api<GitService> {
 		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		// prepending "_" makes it a draft file
 		createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
+		""
+	}
+
+	post("/save-and-update") { req ->
+		println("Going to update existing file")
+		val postContents = req.body<String>()
+		val json = Json(JsonConfiguration.Stable)
+		val yamlPost = json.parse(FromJson.serializer(), postContents)
+
+		updateFile("v79","rightnotes","${yamlPost.path}","master",yamlPost)
 		""
 	}
 
@@ -109,7 +119,7 @@ fun createComponents() = GitService()
 
 // is this really needed? Could just use FromGithub, below, instead?
 @Serializable
-class BasculePost(val filename: String, val title: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>)
+class BasculePost(val path: String, val title: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>)
 
 /**
  * Oh what a tangled web we weave, when first we practice to deceive...
@@ -120,9 +130,7 @@ class FromGithub(val title: String, val slug: String, val playlist: String?, val
 }
 
 @Serializable
-class FromJson(val title: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?) {
-
-	var body: String? = null
+class FromJson(val title: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
 
 	fun toMarkdown(): String {
 		val sb = StringBuilder()

@@ -98,6 +98,33 @@ class GitService : ComponentsProvider {
 		}
 	}
 
+	fun updateFile(userName: String,repoName: String,path: String,branchRef: String,data: FromJson,test: Boolean = false) {
+		println("Attempting to commit $path to $repoName on branch $branchRef")
+		println("Data is: ${data.toMarkdown()}")
+		if (!test) {
+			try {
+				val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
+				val repo = github.getRepository("$userName/$repoName")
+				val ref: GHRef = repo.getRef("heads/$branchRef")
+				val latestCommit: GHCommit = repo.getCommit(ref.getObject().sha)
+				val treeBuilder: GHTreeBuilder = repo.createTree().baseTree(latestCommit.tree.sha)
+				treeBuilder.add(path, data.toMarkdown(), false)
+				val tree = treeBuilder.create()
+				val commit: GHCommit = repo.createCommit()
+						.parent(latestCommit.shA1)
+						.tree(tree.sha)
+						.message("TheRightNotes-App: Updating existing file $path")
+						.create()
+				ref.updateTo(commit.shA1)
+			} catch (ioe: IOException) {
+				println(ioe)
+			}
+		} else {
+			println("TEST: was going to save, but didn't")
+			println(data.toMarkdown())
+		}
+	}
+
 	fun renameFile(userName: String, repoName: String, path: String, branchRef: String) {
 		// I don't know how to do this...
 		try {

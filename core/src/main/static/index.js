@@ -260,6 +260,7 @@ function updateMarkdownEditor(data, disabled) {
     const md_textarea = document.getElementById("form-md-text");
     var o = JSON.parse(data);
 
+    formElements["form-meta-filepath"].value = o.path;
     formElements["form-meta-title"].value = o.title;
     formElements["form-meta-slug"].value = o.slug;
     formElements["form-meta-summary"].value = o.summary;
@@ -327,6 +328,20 @@ function releaseDraft() {
     }).finally((data) => window.location.replace("/"));
 }
 
+function saveAndUpdate() {
+    console.log("Saving and Updating...");
+    let mdeContent = simplemde.value();
+    let form = document.getElementById("form-md");
+    let formData = new FormData(form);
+    formData.append("body",mdeContent);
+    formData.append("slug",document.getElementById("form-meta-slug").value);
+    let formJson = formToJson(formData);
+    let promise = fetch("/save-and-update", {
+        method: "POST",
+        body: formJson
+    });
+}
+
 /**
  * General DOM helper methods
  */
@@ -376,7 +391,7 @@ function formToJson(formData) {
             object[key].push(value);
         }
     });
-    console.log(object);
+    console.log(JSON.stringify(object));
     return JSON.stringify(object);
 }
 
