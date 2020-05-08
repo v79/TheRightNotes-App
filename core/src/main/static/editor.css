@@ -34,3 +34,20 @@ figcaption {
 	text-decoration: underline;
 	cursor: pointer;
 }
+
+/*  image gallery upload */
+#image-upload-drop-area {
+	border: 2px dashed #ccc;
+	border-radius: 20px;
+	width: auto;
+	margin: 100px auto;
+	padding: 20px;
+}
+
+#image-upload-drop-area.highlight {
+	border-color: purple;
+}
+
+#image-files {
+	display: none;
+}

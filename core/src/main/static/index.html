@@ -192,7 +192,8 @@
 		</header>
 		<section class="modal-card-body">
 			<form id="new-post-form" name="new-post-form">
-				<fieldset id="new-post-basics" class="is-active">
+				<input type="hidden" name="path" value="."/>
+				<fieldset id="new-post-basics" class="">
 					<div class="field">
 						<label for="new-post-title">Title</label>
 						<div class="control">
@@ -213,7 +214,7 @@
 						<label for="new-post-summary">Summary</label>
 						<div class="control">
 							<input type="text" name="summary" id="new-post-summary"
-								   placeholder="Summary (max 300 chars?)">
+								   placeholder="Summary (max 300 chars?)" width="160">
 						</div>
 					</div>
 					<div class="field">
@@ -277,11 +278,23 @@
 	<div class="modal-background"></div>
 	<div class="modal-card">
 		<header class="modal-card-head">
-			<p class="modal-card-title">Upload new Composer Portrait</p>
+			<p class="modal-card-title">Upload new composer portraits</p>
 			<button class="delete" aria-label="close" onclick="closeModal('image-upload-modal');"></button>
 		</header>
 		<section class="modal-card-body">
-			<p>Not implemented yet!</p>
+			<form id="image-upload-form">
+				<div id="image-upload-drop-area">
+					<p>Upload a single file with the file dialog or by dragging and dropping an image onto the dashed
+						region.</p>
+					<div class="field">
+						<label for="image-files" class="button">Select a file</label>
+						<div class="control">
+							<input type="file" id="image-files" name="image-uploads" accept="image/*"
+								   onchange="handleFiles(this.files)"/>
+						</div>
+					</div>
+				</div>
+			</form>
 		</section>
 		<footer class="modal-card-foot">
 			<button class="button is-danger" onclick="closeModal('image-upload-modal');">Cancel</button>
@@ -293,7 +306,7 @@
 	<div class="modal-background"></div>
 	<div class="modal-card">
 		<header class="modal-card-head">
-			<p class="modal-card-title">Upload new Composer Portrait</p>
+			<p class="modal-card-title">Create spotify link</p>
 			<button class="delete" aria-label="close" onclick="closeModal('create-spotify-links-modal');"></button>
 		</header>
 		<section class="modal-card-body">
@@ -304,6 +317,29 @@
 		</footer>
 	</div>
 </div>
+
+<!-- general information popup -->
+<div id="generic-info-modal" class="modal">
+	<div class="modal-background"></div>
+	<div class="modal-content">
+		<div class="box">
+			<div class="level">
+				<div class="level-left">
+					<div class="level-item">
+						<p><span id="generic-modal-status"></span></p>
+					</div>
+					<div class="level-right">
+						<div class="level-item">
+							<p id="generic-modal-message"></p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<button class="modal-close is-large" aria-label="close" onclick="closeModal('generic-info-modal');"></button>
+</div>
+
 <script src="index.js"></script>
 <script src="inline-attachment.js"></script>
 <script src="codemirror-inline-attachment.js"></script>

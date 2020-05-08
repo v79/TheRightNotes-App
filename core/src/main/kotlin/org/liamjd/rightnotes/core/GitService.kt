@@ -73,7 +73,8 @@ class GitService : ComponentsProvider {
 	/**
 	 * Create a new file at the given [path]
 	 */
-	fun createNewFile(userName: String, repoName: String, path: String, branchRef: String, data: FromJson, test: Boolean) {
+	fun createNewFile(userName: String, repoName: String, path: String, branchRef: String, data: FromJson, test: Boolean): Boolean {
+		var success = false;
 		if (!test) {
 			try {
 				val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
@@ -89,13 +90,45 @@ class GitService : ComponentsProvider {
 						.message("TheRightNotes-App: Creating draft file $path")
 						.create()
 				ref.updateTo(commit.shA1)
+				success = true
 			} catch (ioe: IOException) {
 				println(ioe)
 			}
 		} else {
 			println("TEST: was going to save, but didn't")
 			println(data.toMarkdown())
+			success = false
 		}
+		return success
+	}
+
+	fun createBinaryFile(userName: String, repoName: String, path: String, branchRef: String, data: ByteArray, test: Boolean): Boolean {
+		println("Attempting to write binary file to ${path} with ${data.size} bytes")
+		var success = false;
+		if (!test) {
+			try {
+				val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
+				val repo = github.getRepository("$userName/$repoName")
+				val ref: GHRef = repo.getRef("heads/$branchRef")
+				val latestCommit: GHCommit = repo.getCommit(ref.getObject().sha)
+				val treeBuilder: GHTreeBuilder = repo.createTree().baseTree(latestCommit.tree.sha)
+				treeBuilder.add(path,data , false)
+				val tree = treeBuilder.create()
+				val commit: GHCommit = repo.createCommit()
+						.parent(latestCommit.shA1)
+						.tree(tree.sha)
+						.message("TheRightNotes-App: Creating binary file $path")
+						.create()
+				ref.updateTo(commit.shA1)
+				success = true
+			} catch (ioe: IOException) {
+				println(ioe)
+			}
+		} else {
+			println("TEST: was going to save, but didn't")
+			success = false
+		}
+		return success
 	}
 
 	fun updateFile(userName: String,repoName: String,path: String,branchRef: String,data: FromJson,test: Boolean = false) {

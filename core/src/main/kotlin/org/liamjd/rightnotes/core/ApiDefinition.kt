@@ -3,14 +3,24 @@ package org.liamjd.rightnotes.core
 import kotlinx.html.*
 import kotlinx.html.dom.createHTMLDocument
 import kotlinx.html.dom.serialize
+import kotlinx.io.ByteArrayOutputStream
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
+import ws.osiris.core.ContentType
+import ws.osiris.core.HttpHeaders
 import ws.osiris.core.Request
 import ws.osiris.core.api
+import java.io.ByteArrayInputStream
+import javax.imageio.ImageIO
 
+private val imageMimeTypes: Set<String> = setOf(
+		"image/png",
+		"image/jpeg",
+		"image/jfif"
+)
 
 val api = api<GitService> {
 
@@ -64,8 +74,9 @@ val api = api<GitService> {
 		// need to sanitise the file name?
 		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		// prepending "_" makes it a draft file
-		createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
-		""
+		val result = createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
+		val status = if(result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
+		req.responseBuilder().status(status).build(fileName)
 	}
 
 	post("/save-and-update") { req ->
@@ -108,6 +119,29 @@ val api = api<GitService> {
 		val pathToRelease = req.body<String>();
 		println("Attempting to release $pathToRelease from draft status")
 		""
+	}
+
+	post("/upload-image") { req ->
+		println(req)
+		val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
+		val contentDispositionHeader = req.headers["Content-Disposition"]
+		val filename = contentDispositionHeader.removePrefix("attachment; filename=\"").removeSuffix("\"")
+		val (mimeType, _) = ContentType.parse(contentTypeHeader)
+		if (!imageMimeTypes.contains(mimeType)) {
+			throw IllegalArgumentException("Content-Type must be one of $imageMimeTypes")
+		}
+		val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
+//		val rotatedImage = Scalr.rotate(image, Scalr.Rotation.CW_90)
+		val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
+		val outputStream = ByteArrayOutputStream()
+		ImageIO.write(image, formatName, outputStream)
+		val byteArray = outputStream.toByteArray()
+
+		createBinaryFile("v79","rightnotes","images/${filename}","master",byteArray,false)
+		req.responseBuilder()
+				.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
+				.header(HttpHeaders.CONTENT_LENGTH, byteArray.size.toString())
+				.build(byteArray)
 	}
 
 }

@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+
 /**
  * Drag-and-drop activities
  * @param ev the drag event
@@ -39,12 +40,14 @@ function dragstart_handler(ev) {
     // Tell the browser both copy and move are possible
     ev.effectAllowed = "link";
 }
+
 function dragover_handler(ev) {
     // Change the target element's border to signify a drag over event
     // has occurred
     ev.currentTarget.style.background = "lightblue";
     ev.preventDefault();
 }
+
 function drop_handler(ev) {
     ev.preventDefault();
     // Get the id of drag source element (that was added to the drag data
@@ -53,6 +56,7 @@ function drop_handler(ev) {
     ev.target.style.background = "";
     ev.target.innerText = id;
 }
+
 function dragend_handler(ev) {
     // Restore source's border
     // Remove all of the drag data
@@ -60,10 +64,20 @@ function dragend_handler(ev) {
 }
 
 /**
+ * Enums
+ */
+const STATUS = {
+    OK: 'ok',
+    ERROR: 'error',
+    WARNING: 'warning'
+}
+
+/**
  * Definition of a wizard page, identified as a <fieldset>
  */
 class WizardPage {
-    constructor(fieldset) {
+    constructor(id, fieldset) {
+        this.id = id;
         this.fieldset = document.getElementById(fieldset);
         this.fields = this.fieldset.elements;
     }
@@ -143,11 +157,11 @@ function clearError(element) {
  * Class representing a multi-step modal dialog which will contain multiple {pages}
  */
 class ModalWizard {
-    constructor(id, pages, container, prevButton, nextButton, lastButton) {
+    constructor(id, pages, formName, prevButton, nextButton, lastButton) {
         this.id = id;
         this.pages = pages;
         this.currentPage = 0;
-        this.container = container;
+        this.formName = formName;
         this.pageCount = this.pages.length - 1;
         this.prevButton = prevButton;
         this.nextButton = nextButton;
@@ -162,12 +176,12 @@ class ModalWizard {
                 let nextPage = this.pages[this.currentPage + 1];
                 let prevPage = this.pages[this.currentPage];
                 hide(prevPage.fieldset.id);
-                show(nextPage.fieldset.id);
-                show(this.prevButton);
+                unhide(nextPage.fieldset.id);
+                unhide(this.prevButton);
                 this.currentPage++;
                 if (this.currentPage === this.pageCount) {
                     hide(this.nextButton);
-                    show(this.lastButton);
+                    unhide(this.lastButton);
                 }
                 if (this.currentPage !== this.pageCount) {
                     hide(this.lastButton);
@@ -184,13 +198,13 @@ class ModalWizard {
             let nextPage = this.pages[this.currentPage];
             let prevPage = this.pages[this.currentPage - 1];
             hide(nextPage.fieldset.id);
-            show(prevPage.fieldset.id);
-            show(this.nextButton);
+            unhide(prevPage.fieldset.id);
+            unhide(this.nextButton);
             this.currentPage--;
             if (this.currentPage === this.pageCount) {
                 hide(this.prevButton);
                 hide(this.lastButton)
-                show(this.nextButton);
+                unhide(this.nextButton);
             }
             if (this.currentPage === 0) {
                 hide(this.prevButton);
@@ -202,17 +216,20 @@ class ModalWizard {
     }
 
     clear() {
-        for (let form of this.container.elements) {
-            form.value = null;
+        let containingForm = document.getElementById(this.formName);
+        for (let formItem of containingForm.elements) {
+            formItem.value = null;
         }
+        this.currentPage = 0;
+        for (let page of this.pages) {
+            console.log("Hiding page " + page.id);
+            hide(page.id);
+        }
+        unhide(this.pages[this.currentPage].fieldset.id);
+        hide(this.lastButton);
+        hide(this.prevButton);
+        unhide(this.nextButton);
     }
-}
-
-function closeModal(modal) {
-    const toClose = document.getElementById(modal)
-    toClose.classList.remove("is-active");
-    newFileWizard.clear();
-    // newFileWizard_CurrentPage = 0;
 }
 
 function newFileWizardNext() {
@@ -234,16 +251,20 @@ class MarkdownFile {
         this.isDraft = isDraft;
     }
 }
-/**
- * Data set up
- */
-let newPostBasics = new WizardPage("new-post-basics");
-let newPostSummary = new WizardPage("new-post-summary-and-spotify");
-let newPostTags = new WizardPage("new-post-tags");
-let newPostBodyText = new WizardPage("new-post-bodytext");
-let newFileWizard = new ModalWizard("new-post-modal", [newPostBasics, newPostSummary, newPostTags, newPostBodyText], "new-post-modal", "new-post-btn-prev", "new-post-btn-next", "new-post-btn-save");
 
+
+
+/**
+ * Global data set up
+ */
+let newPostBasics = new WizardPage("new-post-basics", "new-post-basics");
+let newPostSummary = new WizardPage("new-post-summary-and-spotify", "new-post-summary-and-spotify");
+let newPostTags = new WizardPage("new-post-tags", "new-post-tags");
+let newPostBodyText = new WizardPage("new-post-bodytext", "new-post-bodytext");
+let newFileWizard = new ModalWizard("new-post-modal", [newPostBasics, newPostSummary, newPostTags, newPostBodyText], "new-post-form", "new-post-btn-prev", "new-post-btn-next", "new-post-btn-save");
 var markdownFile = null;
+const dropArea = document.getElementById("image-upload-drop-area");
+
 
 /**
  * button actions
@@ -272,21 +293,78 @@ function updateMarkdownEditor(data, disabled) {
     simplemde.value(o.body)
     md_textarea.disabled = false;
     hide("welcome-message");
-    show(form.id);
-    let isDraft = o.filename.substring(o.filename.lastIndexOf("/")+1).startsWith("_");
-    let loadedFile = new MarkdownFile(o.filename, o.title,isDraft);
+    unhide(form.id);
+    let isDraft = o.filename.substring(o.filename.lastIndexOf("/") + 1).startsWith("_");
+    let loadedFile = new MarkdownFile(o.filename, o.title, isDraft);
     return loadedFile;
 }
 
 function newFile() {
+    newFileWizard.clear();
     const newPostModal = document.getElementById("new-post-modal");
     newPostModal.classList.add("is-active");
 }
 
+/** image upload - make a class out of this? */
 function uploadPortrait() {
     const uploadPortraitModal = document.getElementById("image-upload-modal");
     uploadPortraitModal.classList.add("is-active");
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        let dt = e.dataTransfer;
+        let files = dt.files;
+
+        handleFiles(files);
+    }
 }
+
+function handleFiles(files) {
+    ([...files]).forEach(uploadFile);
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight(e) {
+    dropArea.classList.add("highlight");
+}
+
+function unhighlight(e) {
+    dropArea.classList.remove("highlight");
+}
+
+function uploadFile(file) {
+    fetch("/upload-image", {
+        headers: {
+            'Content-Type': 'image/jpeg',
+            'Content-Disposition': 'attachment; filename="' + file.name + '"'
+        },
+        method: "POST",
+        body: file
+    })
+        .then(() => {  console.log("File uploaded!")/* Done. Inform the user */
+        })
+        .catch(() => { console.log("File upload failed!") /* Error. Inform the user */
+        })
+}
+
+/************ */
+
 
 function generateSlug(elementToUpdate) {
     console.log("Generating slug");
@@ -299,6 +377,7 @@ function generateSlug(elementToUpdate) {
 }
 
 function saveNewFile(newPostForm) {
+
     let form = document.getElementById(newPostForm);
     let formData = new FormData(form);
     let genres = formData.get("genres[]");
@@ -317,7 +396,15 @@ function saveNewFile(newPostForm) {
     let promise = fetch("/save-new-file", {
         method: "POST",
         body: json
-    }).finally((data) => window.location.replace("/"));
+    }).then(response => {
+        if (response.ok) {
+            popupMessage(`File created successfully`, STATUS.OK);
+        } else {
+            popupMessage(`Error creating file`, STATUS.ERROR);
+            console.log("Error creating file " + response.status);
+        }
+    }).finally((() => newFileWizard.clear()));
+    //.finally((data) => window.location.replace("/"));
 }
 
 function releaseDraft() {
@@ -333,8 +420,8 @@ function saveAndUpdate() {
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
-    formData.append("body",mdeContent);
-    formData.append("slug",document.getElementById("form-meta-slug").value);
+    formData.append("body", mdeContent);
+    formData.append("slug", document.getElementById("form-meta-slug").value);
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",
@@ -349,20 +436,67 @@ function updateElement(domElement, html) {
     domElement.innerHTML = html;
 }
 
-function hide(element) {
-    const domElement = document.getElementById(element);
+/**
+ * Hide an element with the given ID (will getElementById)
+ * @param elementId
+ */
+function hide(elementId) {
+    const domElement = document.getElementById(elementId);
     if (domElement) {
         domElement.classList.add("is-hidden");
     }
 }
 
-function show(element) {
-    const domElement = document.getElementById(element);
+/**
+ * Hide (show) an element with the given ID (will getElementById)
+ * @param elementId
+ */
+function unhide(elementId) {
+    const domElement = document.getElementById(elementId);
     if (domElement) {
         domElement.classList.remove("is-hidden");
     }
 }
 
+function showModal(modal) {
+    modal.classList.add("is-active");
+}
+
+function closeModal(modalName) {
+    let element = document.getElementById(modalName);
+    element.classList.remove("is-active");
+}
+
+function popupMessage(messageText, status) {
+    let existingModals = document.querySelectorAll(".modal");
+    for (let existingModal of existingModals) {
+        closeModal(existingModal.id);
+    }
+    const modal = document.getElementById("generic-info-modal");
+    const message = document.getElementById("generic-modal-message");
+    const statusIcon = document.getElementById("generic-modal-status");
+    message.innerText = messageText;
+    let statusClass;
+    switch (status) {
+        case STATUS.ERROR: {
+            statusClass = ["mdi-alert-octagon", "has-text-danger"];
+            break;
+        }
+        case STATUS.OK: {
+            statusClass = ["mdi-check", "has-text-success"];
+            break;
+        }
+        case STATUS.WARNING: {
+            statusClass = ["mdi-alert-circle-outline", "has-text-warning"];
+            break;
+        }
+        default:
+            break;
+    }
+    statusIcon.classList.add("mdi", "is-size-3", ...statusClass);
+    console.log(status + ", " + messageText);
+    showModal(modal);
+}
 
 
 /**
@@ -436,5 +570,5 @@ function createCustomMarkdown(cm, active, startEnd, url) {
 }
 
 function createSpotifyLinks() {
-    show('create-spotify-links-modal');
+    unhide('create-spotify-links-modal');
 }
