@@ -133,7 +133,6 @@ class GitService : ComponentsProvider {
 
 	fun updateFile(userName: String,repoName: String,path: String,branchRef: String,data: FromJson,test: Boolean = false) {
 		println("Attempting to commit $path to $repoName on branch $branchRef")
-		println("Data is: ${data.toMarkdown()}")
 		if (!test) {
 			try {
 				val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)

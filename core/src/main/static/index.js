@@ -276,6 +276,7 @@ function updateMarkdownEditor(data, disabled) {
     const form = document.getElementById("form-md");
     const formElements = form.elements;
     const md_textarea = document.getElementById("form-md-text");
+    const releaseDraftButton = document.getElementById("btn-release-draft");
     var o = JSON.parse(data);
 
     formElements["form-meta-filepath"].value = o.path;
@@ -291,8 +292,13 @@ function updateMarkdownEditor(data, disabled) {
     md_textarea.disabled = false;
     hide("welcome-message");
     unhide(form.id);
-    let isDraft = o.filename.substring(o.filename.lastIndexOf("/") + 1).startsWith("_");
-    let loadedFile = new MarkdownFile(o.filename, o.title, isDraft);
+    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("_");
+    let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
+    if(!isDraft) {
+        hide("btn-release-draft");
+    } else {
+        unhide("btn-release-draft");
+    }
     return loadedFile;
 }
 
@@ -450,7 +456,9 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
-    console.log("Saving and Updating...");
+
+   popupMessage("Saving changes to " + markdownFile.title,STATUS.OK);
+
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
@@ -528,7 +536,6 @@ function popupMessage(messageText, status) {
             break;
     }
     statusIcon.classList.value = ["mdi", "is-size-3", ...statusClass].join(" ");
-    console.log(status + ", " + messageText);
     showModal(modal);
 }
 
