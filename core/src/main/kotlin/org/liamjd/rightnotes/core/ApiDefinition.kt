@@ -9,12 +9,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
-import ws.osiris.core.ContentType
-import ws.osiris.core.HttpHeaders
-import ws.osiris.core.Request
-import ws.osiris.core.api
+import ws.osiris.core.*
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
+
 
 private val imageMimeTypes: Set<String> = setOf(
 		"image/png",
@@ -22,7 +20,7 @@ private val imageMimeTypes: Set<String> = setOf(
 		"image/jfif"
 )
 
-val api = api<GitService> {
+val api = api<RightNotesComponents> {
 
 	staticFiles {
 		path = "/"
@@ -30,7 +28,7 @@ val api = api<GitService> {
 	}
 
 	get("/post-list") { req ->
-		val repoFiles = getPostList("v79", "rightnotes", "sources", "master")
+		val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
 		val postList = createHTMLDocument().ul {
 			repoFiles.forEach { sourceFile ->
 				val kb = if (sourceFile.fileSize != null) sourceFile.fileSize / 1024 else 0L
@@ -54,7 +52,7 @@ val api = api<GitService> {
 	post("/load-markdown") { req ->
 		val fileToLoad = req.body<String>()
 		println("Loading markdown file $fileToLoad")
-		val markdown = loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
+		val markdown = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
 		if (markdown.path.isNotEmpty()) {
 			val json = Json(JsonConfiguration.Stable)
 			val jsonData = json.stringify(BasculePost.serializer(), markdown)
@@ -74,7 +72,7 @@ val api = api<GitService> {
 		// need to sanitise the file name?
 		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		// prepending "_" makes it a draft file
-		val result = createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
+		val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
 		val status = if(result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
 		req.responseBuilder().status(status).build(fileName)
 	}
@@ -85,12 +83,12 @@ val api = api<GitService> {
 		val json = Json(JsonConfiguration.Stable)
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
 
-		updateFile("v79","rightnotes","${yamlPost.path}","master",yamlPost)
+		gitService.updateFile("v79","rightnotes","${yamlPost.path}","master",yamlPost)
 		""
 	}
 
 	get("/image-list") { req ->
-		val imageList = getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
+		val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
 
 //		val fakeImages = arrayListOf<String>("Louise-Farrenc.png", "Middle-aged-Richard-Strauss.png", "Aaron-Copland.png", "Dvorak.png")
 		val imageGallery = createHTMLDocument().ul(classes = "portrait-list") {
@@ -139,20 +137,48 @@ val api = api<GitService> {
 			ImageIO.write(image, formatName, outputStream)
 			val byteArray = outputStream.toByteArray()
 
-//		createBinaryFile("v79","rightnotes","images/${filename}","master",byteArray,false)
+			// store the original in git images folder first
+			gitService.createBinaryFile("v79","rightnotes","images/composers/${filename}","master",byteArray,false)
+			val scaledImage = imageService.scaleAndConvertImage(byteArray)
+
+			println("Scaled image created as a PNG: " +scaledImage.size)
+
+			val nameWithoutExtension = filename.cleanUp()
+
+			gitService.createBinaryFile("v79","rightnotes","assets/images/scaled/${nameWithoutExtension}.png","master",scaledImage,false)
+
 			req.responseBuilder()
 					.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
-					.header(HttpHeaders.CONTENT_LENGTH, byteArray.size.toString())
-					.build(byteArray)
+					.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
+					.build(scaledImage)
 		}
 	}
 
 }
 
+private fun String.cleanUp(): String {
+	val WORD_SEPARATOR = "-"
+	val leaf = this.substringBeforeLast(".").replace(" ",WORD_SEPARATOR)
+	val titleCase = leaf.split(WORD_SEPARATOR).map { word ->
+		if(word.isEmpty()) word else Character.toTitleCase(word[0]) + word.substring(1).toLowerCase()
+	}.joinToString(WORD_SEPARATOR)
+	return titleCase
+}
+
 private fun Request.returnHtml(body: String) =
 		this.responseBuilder().status(200).header("Content-Type", "text/html").build(body)
 
-fun createComponents() = GitService()
+interface RightNotesComponents : ComponentsProvider {
+	val gitService: GitService
+	val imageService: ImageProcessor
+}
+
+class RightNotesComponentsImpl : RightNotesComponents {
+	override val gitService: GitService = GitService()
+	override val imageService: ImageProcessor = ImageProcessor()
+}
+
+fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
 
 // is this really needed? Could just use FromGithub, below, instead?
 @Serializable

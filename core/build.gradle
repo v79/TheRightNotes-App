@@ -27,9 +27,6 @@ dependencies {
 	// github
 	compile 'org.kohsuke:github-api:1.109'
 
-	//fuel http client library
-	implementation 'com.github.kittinunf.fuel:fuel:2.2.2'
-
 	// html generation
 	implementation "org.jetbrains.kotlinx:kotlinx-html-jvm:${kotlinx_html_version}"
 
@@ -37,8 +34,10 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.14.0'
 
 	// yaml
-	//implementation 'org.yaml:snakeyaml:1.21'
 	implementation "com.charleskorn.kaml:kaml:0.15.0"
+
+	// image processing
+	implementation "org.imgscalr:imgscalr-lib:4.2"
 }
 
 osiris {

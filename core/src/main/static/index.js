@@ -2,6 +2,14 @@
 /**
  * On document load activities to populate file list and image gallery
  */
+function loadImageGallery() {
+    const imageGalleryDom = document.querySelector("#image-gallery");
+
+    let promise = fetch("/image-list")
+        .then((response) => response.text())
+        .then(data => updateElement(imageGalleryDom, data));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     function loadFileList() {
         const fileListDom = document.querySelector("#file-list");
@@ -11,18 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => updateElement(fileListDom, data));
     }
 
-    function loadImageGallery() {
-        const imageGalleryDom = document.querySelector("#image-gallery");
-
-        let promise = fetch("/image-list")
-            .then((response) => response.text())
-            .then(data => updateElement(imageGalleryDom, data));
-    }
-
     loadFileList();
     loadImageGallery();
-
-
 });
 
 
@@ -350,6 +348,8 @@ function unhighlight(e) {
 }
 
 function uploadFile(file) {
+    // disable cancel button
+    document.getElementById("btn-cancel-image-upload").classList.toggle("is-disabled");
     fetch("/upload-image", {
         headers: {
             'Content-Type': 'image/jpeg',
@@ -360,7 +360,7 @@ function uploadFile(file) {
     })
         .then((response) => {
             if (response.ok) {
-                popupMessage(`Upload of image ${file.name} completed.\nIt will now be processed and resized, before appearing in\nthe Composer Portraits box`, STATUS.OK);
+                popupMessage(`Upload of image ${file.name} completed.\nIt has been resized and converted and will appear in\nthe Composer Portraits box`, STATUS.OK);
             } else {
                 popupMessage(`Upload of image ${file.name} failed.\nPlease try again with a different file.`, STATUS.ERROR);
             }
@@ -369,6 +369,7 @@ function uploadFile(file) {
             console.log("Unspecified error uploading file " + file.name);
         })
         .finally(() => {
+            loadImageGallery();
             resetUploadModal();
         })
 }
@@ -389,6 +390,7 @@ function resetUploadModal() {
     while (previewElem.firstChild) {
         previewElem.firstChild.remove();
     }
+    document.getElementById("btn-cancel-image-upload").classList.toggle("is-disabled");
 }
 
 /************ */
