@@ -10,10 +10,10 @@ import java.time.Duration
  */
 val config = ApplicationConfig(
 		applicationName = "TheRightNotes-App",
+		applicationDescription = "Collection of REST services to create and edit posts, and upload images",
 		lambdaMemorySizeMb = 512,
-		lambdaTimeout = Duration.ofSeconds(10),
+		lambdaTimeout = Duration.ofSeconds(30),
 		environmentVariables = mapOf(
-				"EXAMPLE_ENVIRONMENT_VARIABLE" to "Bob",
 				"GIT_AUTH_TOKEN" to System.getenv("GIT_AUTH_TOKEN")
 		),
 		authConfig = AuthConfig.CognitoUserPools("arn:aws:cognito-idp:eu-west-2:086949310404:userpool/eu-west-2_ZvVjWGjDQ"),

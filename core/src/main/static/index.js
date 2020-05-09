@@ -349,7 +349,10 @@ function unhighlight(e) {
 
 function uploadFile(file) {
     // disable cancel button
-    document.getElementById("btn-cancel-image-upload").classList.toggle("is-disabled");
+    document.getElementById("btn-cancel-image-upload").disabled = true;
+    // show spinner
+    unhide("image-upload-spinner-span");
+
     fetch("/upload-image", {
         headers: {
             'Content-Type': 'image/jpeg',
@@ -390,7 +393,8 @@ function resetUploadModal() {
     while (previewElem.firstChild) {
         previewElem.firstChild.remove();
     }
-    document.getElementById("btn-cancel-image-upload").classList.toggle("is-disabled");
+    document.getElementById("btn-cancel-image-upload").disabled = false;
+    hide("image-upload-spinner-span");
 }
 
 /************ */

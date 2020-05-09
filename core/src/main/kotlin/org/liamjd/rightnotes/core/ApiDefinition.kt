@@ -145,7 +145,11 @@ val api = api<RightNotesComponents> {
 
 			val nameWithoutExtension = filename.cleanUp()
 
+			// store the processed file in github
 			gitService.createBinaryFile("v79","rightnotes","assets/images/scaled/${nameWithoutExtension}.png","master",scaledImage,false)
+
+			// transfer the processed file to S3 bucket
+			s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
 
 			req.responseBuilder()
 					.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
@@ -171,11 +175,13 @@ private fun Request.returnHtml(body: String) =
 interface RightNotesComponents : ComponentsProvider {
 	val gitService: GitService
 	val imageService: ImageProcessor
+	val s3Service: S3Service
 }
 
 class RightNotesComponentsImpl : RightNotesComponents {
 	override val gitService: GitService = GitService()
 	override val imageService: ImageProcessor = ImageProcessor()
+	override val s3Service: S3Service = S3Service()
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
