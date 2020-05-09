@@ -253,7 +253,6 @@ class MarkdownFile {
 }
 
 
-
 /**
  * Global data set up
  */
@@ -332,7 +331,9 @@ function uploadPortrait() {
 }
 
 function handleFiles(files) {
-    ([...files]).forEach(uploadFile);
+    files = [...files];
+    files.forEach(uploadFile);
+    files.forEach(previewFile);
 }
 
 function preventDefaults(e) {
@@ -357,10 +358,37 @@ function uploadFile(file) {
         method: "POST",
         body: file
     })
-        .then(() => {  console.log("File uploaded!")/* Done. Inform the user */
+        .then((response) => {
+            if (response.ok) {
+                popupMessage(`Upload of image ${file.name} completed.\nIt will now be processed and resized, before appearing in\nthe Composer Portraits box`, STATUS.OK);
+            } else {
+                popupMessage(`Upload of image ${file.name} failed.\nPlease try again with a different file.`, STATUS.ERROR);
+            }
         })
-        .catch(() => { console.log("File upload failed!") /* Error. Inform the user */
+        .catch(() => {
+            console.log("Unspecified error uploading file " + file.name);
         })
+        .finally(() => {
+            resetUploadModal();
+        })
+}
+
+function previewFile(file) {
+    let reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = function () {
+        let img = document.createElement('img');
+        img.src = reader.result;
+        img.width = 128;
+        document.getElementById("upload-preview").appendChild(img);
+    }
+}
+
+function resetUploadModal() {
+    const previewElem = document.getElementById("upload-preview");
+    while (previewElem.firstChild) {
+        previewElem.firstChild.remove();
+    }
 }
 
 /************ */
@@ -493,7 +521,7 @@ function popupMessage(messageText, status) {
         default:
             break;
     }
-    statusIcon.classList.add("mdi", "is-size-3", ...statusClass);
+    statusIcon.classList.value = ["mdi", "is-size-3", ...statusClass].join(" ");
     console.log(status + ", " + messageText);
     showModal(modal);
 }

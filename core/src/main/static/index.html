@@ -284,17 +284,20 @@
 		<section class="modal-card-body">
 			<form id="image-upload-form">
 				<div id="image-upload-drop-area">
-					<p>Upload a single file with the file dialog or by dragging and dropping an image onto the dashed
+					<p>Upload a single file with the file dialog or by dragging and dropping an image onto this dashed
 						region.</p>
 					<div class="field">
-						<label for="image-files" class="button">Select a file</label>
+<!--						<label for="image-files" class="button">Select a file</label>-->
 						<div class="control">
-							<input type="file" id="image-files" name="image-uploads" accept="image/*"
-								   onchange="handleFiles(this.files)"/>
+							<!--<input type="file" id="image-files" name="image-uploads" accept="image/*"
+								   onchange="handleFiles(this.files)"/>-->
 						</div>
 					</div>
 				</div>
 			</form>
+			<div id="upload-preview" class="preview-gallery">
+
+			</div>
 		</section>
 		<footer class="modal-card-foot">
 			<button class="button is-danger" onclick="closeModal('image-upload-modal');">Cancel</button>

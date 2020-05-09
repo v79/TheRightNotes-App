@@ -122,26 +122,29 @@ val api = api<GitService> {
 	}
 
 	post("/upload-image") { req ->
-		println(req)
 		val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
 		val contentDispositionHeader = req.headers["Content-Disposition"]
 		val filename = contentDispositionHeader.removePrefix("attachment; filename=\"").removeSuffix("\"")
 		val (mimeType, _) = ContentType.parse(contentTypeHeader)
 		if (!imageMimeTypes.contains(mimeType)) {
-			throw IllegalArgumentException("Content-Type must be one of $imageMimeTypes")
-		}
-		val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
-//		val rotatedImage = Scalr.rotate(image, Scalr.Rotation.CW_90)
-		val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
-		val outputStream = ByteArrayOutputStream()
-		ImageIO.write(image, formatName, outputStream)
-		val byteArray = outputStream.toByteArray()
+			println("Content-Type must be one of $imageMimeTypes")
+			req.responseBuilder().status(HttpStatus.SC_BAD_REQUEST).header("Content-Type","text/plain").build("Image must be a JPG, PNG or JFIF file.")
 
-		createBinaryFile("v79","rightnotes","images/${filename}","master",byteArray,false)
-		req.responseBuilder()
-				.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
-				.header(HttpHeaders.CONTENT_LENGTH, byteArray.size.toString())
-				.build(byteArray)
+		} else {
+			val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
+//		val rotatedImage = Scalr.rotate(image, Scalr.Rotation.CW_90)
+			println("Upload image called with ${filename}, ${mimeType}, ${req.requireBinaryBody().size} bytes")
+			val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
+			val outputStream = ByteArrayOutputStream()
+			ImageIO.write(image, formatName, outputStream)
+			val byteArray = outputStream.toByteArray()
+
+//		createBinaryFile("v79","rightnotes","images/${filename}","master",byteArray,false)
+			req.responseBuilder()
+					.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
+					.header(HttpHeaders.CONTENT_LENGTH, byteArray.size.toString())
+					.build(byteArray)
+		}
 	}
 
 }
