@@ -4,8 +4,6 @@ import kotlinx.html.*
 import kotlinx.html.dom.createHTMLDocument
 import kotlinx.html.dom.serialize
 import kotlinx.io.ByteArrayOutputStream
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
@@ -89,9 +87,21 @@ val api = api<RightNotesComponents> {
 
 	get("/image-list") { req ->
 		val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
+		val galleryList = mutableListOf<GalleryImage>()
+		imageList.forEach { sourceFile ->
+			galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}",sourceFile.size))
+		}
 
-//		val fakeImages = arrayListOf<String>("Louise-Farrenc.png", "Middle-aged-Richard-Strauss.png", "Aaron-Copland.png", "Dvorak.png")
-		val imageGallery = createHTMLDocument().ul(classes = "portrait-list") {
+		if (imageList.isNotEmpty()) {
+			val gallery = Gallery(galleryList)
+			val json = Json(JsonConfiguration.Stable)
+			val jsonData = json.stringify(Gallery.serializer(), gallery)
+			jsonData
+		} else {
+			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+		}
+
+		/*val imageGallery = createHTMLDocument().ul(classes = "portrait-list") {
 			imageList.forEach { sourceFile ->
 				li {
 					figure(classes = "image is-96x96 is-rounded gallery-figure") {
@@ -110,7 +120,7 @@ val api = api<RightNotesComponents> {
 				}
 			}
 		}
-		req.returnHtml(imageGallery.serialize(true))
+		req.returnHtml(imageGallery.serialize(true))*/
 	}
 
 	post("/release-from-draft") { req ->
@@ -185,55 +195,5 @@ class RightNotesComponentsImpl : RightNotesComponents {
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
-
-// is this really needed? Could just use FromGithub, below, instead?
-@Serializable
-class BasculePost(val path: String, val title: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>)
-
-/**
- * Oh what a tangled web we weave, when first we practice to deceive...
- */
-@Serializable
-class FromGithub(val title: String, val slug: String, val playlist: String?, val summary: String?, val composers: List<String>, val genres: List<String>) {
-	var body: String? = null
-}
-
-@Serializable
-class FromJson(val title: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
-
-	fun toMarkdown(): String {
-		val sb = StringBuilder()
-		sb.appendln("---")
-		sb.appendln("title: $title")
-		sb.appendln("slug: $slug")
-		sb.appendln("author: T W Davison")
-		sb.appendln("layout: post")
-		// TODO: sb.appendln("date: DATE")
-		sb.appendln("playlist: $playlist")
-
-		sb.append("genres: [")
-		genres?.forEachIndexed { i, g ->
-			sb.append(g)
-			if (i != genres.size - 1) {
-				sb.append(",")
-			}
-		}
-		sb.appendln("]")
-		sb.append("composers: [")
-		composers?.forEachIndexed { i, c ->
-			sb.append(c)
-			if (i != composers.size - 1) {
-				sb.append(",")
-			}
-		}
-		sb.appendln("]")
-		sb.appendln("summary: $summary")
-		sb.appendln("---")
-		sb.appendln(body)
-		return sb.toString()
-	}
-}
-
-data class GHSourceFile(val name: String, val source: String, val draft: Boolean, val fileSize: Long?)
 
 

@@ -56,17 +56,17 @@
 					<div class="panel-block">
 						<p>Drag-and-drop an image into the text box to the right to add it to the blog post.</p>
 					</div>
-					<!--<div class="panel-block">
+					<div class="panel-block">
 						<p class="control has-icons-left">
-							<input class="input" type="text" placeholder="Search" name="composer-search" id="composer-search">
+							<input class="input" type="text" placeholder="Search" name="composer-search" id="composer-search" onkeyup="filterGallery();">
 							<span class="icon is-left">
         <i class="fas fa-search" aria-hidden="true"></i>
       </span>
 						</p>
-					</div>-->
+					</div>
 					<div class="panel-block">
 						<div id="image-gallery">
-							<p class="is-loading"><em>Fetching composer portraits...</em></p>
+							<p id="image-gallery-loading-msg" class="is-loading"><em>Fetching composer portraits...</em></p>
 						</div>
 					</div>
 				</div>

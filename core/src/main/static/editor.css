@@ -9,7 +9,7 @@ ul.portrait-list {
 ul.portrait-list > li {
 	display: inline-block;
 	margin: 0;
-	padding: 0;
+	padding: 2px;
 }
 
 li > figure {

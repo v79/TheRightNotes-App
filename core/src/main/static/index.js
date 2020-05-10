@@ -1,13 +1,82 @@
 "use strict";
+
 /**
  * On document load activities to populate file list and image gallery
  */
+let gallery;
+
 function loadImageGallery() {
+    let promise = fetch("/image-list")
+        .then((response) => {
+            return response.json()
+        })
+        .then((data => {
+            var list = data.imageList;
+            buildGalleryList(list);
+            gallery = list;
+        }))
+    // let promise = fetch("/image-list")
+    //     .then((response) =>
+    //         gallery = JSON.parse(response.json()))
+    //     .then((x) =>
+    //         console.log("x: " + x + ", gallery: " + gallery))
+    //     .then(data => updateElement(imageGalleryDom, data));
+    return gallery;
+}
+
+function buildGalleryList(list) {
+    const imageGalleryLoading = document.getElementById("image-gallery-loading-msg");
     const imageGalleryDom = document.querySelector("#image-gallery");
 
-    let promise = fetch("/image-list")
-        .then((response) => response.text())
-        .then(data => updateElement(imageGalleryDom, data));
+    var ul = document.createElement("ul");
+    ul.id = "filtered-list"
+    ul.classList.add("portrait-list");
+    for (let image of list) {
+        buildGalleryImage(image, ul);
+    }
+
+    console.log(list);
+    if(imageGalleryLoading) {
+        imageGalleryDom.replaceChild(ul, imageGalleryLoading);
+    } else {
+        imageGalleryDom.replaceChild(ul, document.getElementById("filtered-list"));
+    }
+}
+
+function buildGalleryImage(image, ul) {
+    var li = document.createElement("li");
+    var figure = document.createElement("figure");
+    figure.classList.add("image", "is-96x96", "gallery-figure");
+    var img = document.createElement("img");
+    img.src = image.url;
+    img.title = image.filename;
+    img.alt = `${image.filename} (${image.size} bytes)`;
+    img.ondragstart = "dragstart_handler(event);";
+    img.ondragend = "dragend_handler(event);";
+    img.draggable = true;
+    var figcaption = document.createElement("figcaption");
+    figcaption.classList.add("is-small");
+    figcaption.innerText = image.filename;
+    figure.appendChild(img);
+    figure.appendChild(figcaption);
+    li.appendChild(figure);
+    ul.appendChild(li);
+}
+
+function filterGallery() {
+    const searchInput = document.getElementById("composer-search").value;
+    console.log("Filtering for " + searchInput);
+    let filtered = searchGallery(searchInput);
+    buildGalleryList(filtered);
+}
+
+function searchGallery(query) {
+    let lower = query.toLowerCase();
+    let foundItems = gallery.filter(image => {
+            return image.filename.toLowerCase().includes(lower);
+        }
+    )
+    return foundItems;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -294,7 +363,7 @@ function updateMarkdownEditor(data, disabled) {
     unhide(form.id);
     let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("_");
     let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
-    if(!isDraft) {
+    if (!isDraft) {
         hide("btn-release-draft");
     } else {
         unhide("btn-release-draft");
@@ -457,7 +526,7 @@ function releaseDraft() {
 
 function saveAndUpdate() {
 
-   popupMessage("Saving changes to " + markdownFile.title,STATUS.OK);
+    popupMessage("Saving changes to " + markdownFile.title, STATUS.OK);
 
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
@@ -477,6 +546,7 @@ function saveAndUpdate() {
 function updateElement(domElement, html) {
     domElement.innerHTML = html;
 }
+
 
 /**
  * Hide an element with the given ID (will getElementById)
