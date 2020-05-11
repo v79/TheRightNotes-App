@@ -42,7 +42,6 @@ function buildGalleryList(list) {
         initialGalleryElement = ul;
     }
 
-    console.log(list);
     if(imageGalleryLoading) {
         imageGalleryDom.replaceChild(ul, imageGalleryLoading);
     } else {
@@ -417,6 +416,7 @@ function uploadPortrait() {
 }
 
 function handleFiles(files) {
+    console.log("Files for upload: " + files.length);
     files = [...files];
     files.forEach(uploadFile);
     files.forEach(previewFile);
@@ -467,12 +467,16 @@ function uploadFile(file) {
 
 function previewFile(file) {
     let reader = new FileReader();
+    const preview = document.getElementById("upload-preview");
     reader.readAsDataURL(file);
     reader.onloadend = function () {
         let img = document.createElement('img');
         img.src = reader.result;
         img.width = 128;
-        document.getElementById("upload-preview").appendChild(img);
+        preview.appendChild(img);
+        let p = document.createElement('p');
+        p.innerText = file.name;
+        preview.appendChild(p);
     }
 }
 
@@ -482,6 +486,7 @@ function resetUploadModal() {
         previewElem.firstChild.remove();
     }
     document.getElementById("btn-cancel-image-upload").disabled = false;
+    document.getElementById("upload-preview").
     hide("image-upload-spinner-span");
 }
 

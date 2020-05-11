@@ -138,13 +138,20 @@ val api = api<RightNotesComponents> {
 			// store the processed file in github
 			gitService.createBinaryFile("v79","rightnotes","assets/images/scaled/${nameWithoutExtension}.png","master",scaledImage,false)
 
-			// transfer the processed file to S3 bucket
-			s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
+			// TODO: deal with this error message:
+			// org.kohsuke.github.HttpException: {"message":"Reference cannot be updated","documentation_url":"https://developer.github.com/v3/git/refs/#update-a-reference"}
 
-			req.responseBuilder()
-					.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
-					.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
-					.build(scaledImage)
+			// transfer the processed file to S3 bucket
+			val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
+
+			if(writtenToBucket) {
+				req.responseBuilder()
+						.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
+						.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
+						.build(scaledImage)
+			} else {
+				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+			}
 		}
 	}
 

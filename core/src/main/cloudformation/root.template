@@ -24,6 +24,10 @@ Resources:
             Action:
               - "logs:*"
             Resource: "arn:aws:logs:*:*:*"
+          - Effect: Allow
+            Action:
+              - "s3:*"
+            Resource: "arn:aws:s3:::www.therightnotes.org/*"
 
   # This role is used by the lambda function containing the application logic.
   # It should not be necessary to modify it except to delete ManagedPolicyArns if it is not required.
