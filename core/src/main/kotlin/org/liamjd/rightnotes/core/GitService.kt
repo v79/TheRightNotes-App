@@ -9,6 +9,7 @@ import java.nio.charset.Charset
 
 class GitService : ComponentsProvider {
 	private val GIT_AUTH_TOKEN: String
+	private val DRAFT = "__"
 
 	init {
 		GIT_AUTH_TOKEN = System.getenv("GIT_AUTH_TOKEN")
@@ -18,7 +19,7 @@ class GitService : ComponentsProvider {
 		val postList = mutableListOf<GHSourceFile>()
 		try {
 			val contentList = getGitHubFileList(userName, repoName, path, branchRef)
-			contentList.filter { it.name.endsWith(".md", true) }.forEach { postList.add(GHSourceFile(it.name, it.path, it.name.startsWith("_"), it.size)) }
+			contentList.filter { it.name.endsWith(".md", true) }.forEach { postList.add(GHSourceFile(it.name, it.path, it.name.startsWith(DRAFT), it.size)) }
 			return postList
 		} catch (ioe: IOException) {
 			println(ioe)

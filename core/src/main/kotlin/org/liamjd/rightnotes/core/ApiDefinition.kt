@@ -18,6 +18,8 @@ private val imageMimeTypes: Set<String> = setOf(
 		"image/jfif"
 )
 
+private val DRAFT = "__"
+
 val api = api<RightNotesComponents> {
 
 	staticFiles {
@@ -34,7 +36,7 @@ val api = api<RightNotesComponents> {
 					span(classes = "post-list-item") {
 						onClick = "loadMarkdownFile('${sourceFile.source}')"
 						title = "$kb kb"
-						+sourceFile.name.removePrefix("_").replace("'", "\\'")
+						+sourceFile.name.removePrefix(DRAFT).replace("'", "\\'").removeSuffix(".md")
 						if (sourceFile.draft) {
 							span(classes = "tag is-light draft") {
 								+"DRAFT"
@@ -68,8 +70,8 @@ val api = api<RightNotesComponents> {
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
 		println(yamlPost)
 		// need to sanitise the file name?
-		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
-		// prepending "_" makes it a draft file
+		// prepending "__" makes it a draft file
+		val fileName = DRAFT + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
 		val status = if(result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
 		req.responseBuilder().status(status).build(fileName)
@@ -100,27 +102,6 @@ val api = api<RightNotesComponents> {
 		} else {
 			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
 		}
-
-		/*val imageGallery = createHTMLDocument().ul(classes = "portrait-list") {
-			imageList.forEach { sourceFile ->
-				li {
-					figure(classes = "image is-96x96 is-rounded gallery-figure") {
-						img {
-							draggable = Draggable.htmlTrue
-							alt = sourceFile.name
-							src = "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}"
-							title = sourceFile.name
-							onDragStart = "dragstart_handler(event);"
-							onDragEnd = "dragend_handler(event);"
-						}
-						figcaption(classes = "is-small") {
-							+sourceFile.name
-						}
-					}
-				}
-			}
-		}
-		req.returnHtml(imageGallery.serialize(true))*/
 	}
 
 	post("/release-from-draft") { req ->
@@ -140,7 +121,6 @@ val api = api<RightNotesComponents> {
 
 		} else {
 			val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
-//		val rotatedImage = Scalr.rotate(image, Scalr.Rotation.CW_90)
 			println("Upload image called with ${filename}, ${mimeType}, ${req.requireBinaryBody().size} bytes")
 			val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
 			val outputStream = ByteArrayOutputStream()

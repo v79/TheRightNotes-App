@@ -4,6 +4,7 @@
  * On document load activities to populate file list and image gallery
  */
 let gallery;
+let initialGalleryElement;
 
 function loadImageGallery() {
     let promise = fetch("/image-list")
@@ -28,11 +29,17 @@ function buildGalleryList(list) {
     const imageGalleryLoading = document.getElementById("image-gallery-loading-msg");
     const imageGalleryDom = document.querySelector("#image-gallery");
 
-    var ul = document.createElement("ul");
+    const ul = document.createElement("ul");
     ul.id = "filtered-list"
     ul.classList.add("portrait-list");
     for (let image of list) {
         buildGalleryImage(image, ul);
+    }
+
+    // on first load, this will be null, so set it to our new list
+    // we can use this to 'reset'
+    if(!initialGalleryElement) {
+        initialGalleryElement = ul;
     }
 
     console.log(list);
@@ -65,9 +72,15 @@ function buildGalleryImage(image, ul) {
 
 function filterGallery() {
     const searchInput = document.getElementById("composer-search").value;
-    console.log("Filtering for " + searchInput);
-    let filtered = searchGallery(searchInput);
-    buildGalleryList(filtered);
+    if(searchInput.length > 2) {
+        console.log("Filtering for " + searchInput);
+        let filtered = searchGallery(searchInput);
+        buildGalleryList(filtered);
+    } else {
+        const imageGalleryDom = document.querySelector("#image-gallery");
+        // change event fired, we don't have a valid search query, reset to full list
+        imageGalleryDom.replaceChild(initialGalleryElement, document.getElementById("filtered-list"));
+    }
 }
 
 function searchGallery(query) {
@@ -361,7 +374,7 @@ function updateMarkdownEditor(data, disabled) {
     md_textarea.disabled = false;
     hide("welcome-message");
     unhide(form.id);
-    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("_");
+    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("__");
     let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
     if (!isDraft) {
         hide("btn-release-draft");
@@ -525,9 +538,6 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
-
-    popupMessage("Saving changes to " + markdownFile.title, STATUS.OK);
-
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
@@ -538,6 +548,7 @@ function saveAndUpdate() {
         method: "POST",
         body: formJson
     });
+    popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
 }
 
 /**
