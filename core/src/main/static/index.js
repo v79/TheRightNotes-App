@@ -486,7 +486,6 @@ function resetUploadModal() {
         previewElem.firstChild.remove();
     }
     document.getElementById("btn-cancel-image-upload").disabled = false;
-    document.getElementById("upload-preview").
     hide("image-upload-spinner-span");
 }
 
