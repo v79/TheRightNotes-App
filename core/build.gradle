@@ -39,9 +39,6 @@ dependencies {
 
 	// yaml
 	implementation "com.charleskorn.kaml:kaml:0.15.0"
-
-	// image processing
-	implementation "org.imgscalr:imgscalr-lib:4.2"
 }
 
 osiris {

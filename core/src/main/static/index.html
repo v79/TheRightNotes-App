@@ -11,7 +11,7 @@
 	<script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
 </head>
 <body>
-<section>
+<section id="rn-header">
 	<div class="container">
 		<div class="level">
 			<div class="level-item">
@@ -20,11 +20,11 @@
 		</div>
 	</div>
 </section>
-<section>
+<section id="rn-container">
 	<div class="container">
 		<div class="columns">
-			<div class="column file-list is-one-quarter">
-				<div class="panel">
+			<div class="column file-list is-one-quarter" id="rn-left-column">
+				<div class="panel" id="rn-articles">
 					<p class="panel-heading">
 						Articles
 					</p>
@@ -42,29 +42,36 @@
 					</div>
 				</div>
 
-				<div class="panel">
+				<div class="panel" id="rn-composers">
 					<p class="panel-heading">
 						Composer Portraits
 					</p>
 					<div class="panel-block">
 						<div id="portrait-buttons control">
-							<a href="#" id="image-upload" title="Add new portrait" class="button"
+							<a href="#" id="image-upload" title="Add new portrait" class="button is-primary"
 							   onclick="uploadPortrait()"><span
-									class="mdi mdi-file-plus  is-primary">Upload Portrait</span></a>
+									class="mdi mdi-file-plus">Upload Portrait</span></a>
 						</div>
 					</div>
 					<div class="panel-block">
 						<p>Drag-and-drop an image into the text box to the right to add it to the blog post.</p>
 					</div>
 					<div class="panel-block">
+						<p class="control has-icons-left">
+							<input class="input" type="text" placeholder="Search" name="composer-search" id="composer-search" onchange="filterGallery();" onkeyup="filterGallery();">
+							<span class="icon is-left mdi mdi-account-search-outline"></span>
+      </span>
+						</p>
+					</div>
+					<div class="panel-block">
 						<div id="image-gallery">
-							<p class="is-loading"><em>Fetching composer portraits...</em></p>
+							<p id="image-gallery-loading-msg" class="is-loading"><em>Fetching composer portraits...</em></p>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div class="column is-three-quarters">
+			<div class="column is-three-quarters" id="rn-right-column">
 				<p class="is-large" id="welcome-message">&lt;-- Choose a file from the list, or click 'New' to start a
 					post</p>
 				<div id="editor">
@@ -287,7 +294,7 @@
 					<p>Upload a single file by dragging and dropping an image onto this dashed
 						region.</p>
 					<div id="image-upload-spinner has-text-centered">
-						<span id="image-upload-spinner-span" class="is-size-3 mdi mdi-cached mdi-spin is-hidden"></span>
+						<progress id="image-upload-spinner-span" class="progress is-info is-hidden" max="100">60%</progress>
 					</div>
 					<!--					<div class="field">
 											<label for="image-files" class="button">Select a file</label>

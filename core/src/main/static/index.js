@@ -1,13 +1,94 @@
 "use strict";
+
 /**
  * On document load activities to populate file list and image gallery
  */
+let gallery;
+let initialGalleryElement;
+
 function loadImageGallery() {
+    let promise = fetch("/image-list")
+        .then((response) => {
+            return response.json()
+        })
+        .then((data => {
+            var list = data.imageList;
+            buildGalleryList(list);
+            gallery = list;
+        }))
+    // let promise = fetch("/image-list")
+    //     .then((response) =>
+    //         gallery = JSON.parse(response.json()))
+    //     .then((x) =>
+    //         console.log("x: " + x + ", gallery: " + gallery))
+    //     .then(data => updateElement(imageGalleryDom, data));
+    return gallery;
+}
+
+function buildGalleryList(list) {
+    const imageGalleryLoading = document.getElementById("image-gallery-loading-msg");
     const imageGalleryDom = document.querySelector("#image-gallery");
 
-    let promise = fetch("/image-list")
-        .then((response) => response.text())
-        .then(data => updateElement(imageGalleryDom, data));
+    const ul = document.createElement("ul");
+    ul.id = "filtered-list"
+    ul.classList.add("portrait-list");
+    for (let image of list) {
+        buildGalleryImage(image, ul);
+    }
+
+    // on first load, this will be null, so set it to our new list
+    // we can use this to 'reset'
+    if(!initialGalleryElement) {
+        initialGalleryElement = ul;
+    }
+
+    if(imageGalleryLoading) {
+        imageGalleryDom.replaceChild(ul, imageGalleryLoading);
+    } else {
+        imageGalleryDom.replaceChild(ul, document.getElementById("filtered-list"));
+    }
+}
+
+function buildGalleryImage(image, ul) {
+    var li = document.createElement("li");
+    var figure = document.createElement("figure");
+    figure.classList.add("image", "is-96x96", "gallery-figure");
+    var img = document.createElement("img");
+    img.src = image.url;
+    img.title = image.filename;
+    img.alt = `${image.filename} (${image.size} bytes)`;
+    img.ondragstart = "dragstart_handler(event);";
+    img.ondragend = "dragend_handler(event);";
+    img.draggable = true;
+    var figcaption = document.createElement("figcaption");
+    figcaption.classList.add("is-small");
+    figcaption.innerText = image.filename;
+    figure.appendChild(img);
+    figure.appendChild(figcaption);
+    li.appendChild(figure);
+    ul.appendChild(li);
+}
+
+function filterGallery() {
+    const searchInput = document.getElementById("composer-search").value;
+    if(searchInput.length > 2) {
+        console.log("Filtering for " + searchInput);
+        let filtered = searchGallery(searchInput);
+        buildGalleryList(filtered);
+    } else {
+        const imageGalleryDom = document.querySelector("#image-gallery");
+        // change event fired, we don't have a valid search query, reset to full list
+        imageGalleryDom.replaceChild(initialGalleryElement, document.getElementById("filtered-list"));
+    }
+}
+
+function searchGallery(query) {
+    let lower = query.toLowerCase();
+    let foundItems = gallery.filter(image => {
+            return image.filename.toLowerCase().includes(lower);
+        }
+    )
+    return foundItems;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -276,6 +357,7 @@ function updateMarkdownEditor(data, disabled) {
     const form = document.getElementById("form-md");
     const formElements = form.elements;
     const md_textarea = document.getElementById("form-md-text");
+    const releaseDraftButton = document.getElementById("btn-release-draft");
     var o = JSON.parse(data);
 
     formElements["form-meta-filepath"].value = o.path;
@@ -291,8 +373,13 @@ function updateMarkdownEditor(data, disabled) {
     md_textarea.disabled = false;
     hide("welcome-message");
     unhide(form.id);
-    let isDraft = o.filename.substring(o.filename.lastIndexOf("/") + 1).startsWith("_");
-    let loadedFile = new MarkdownFile(o.filename, o.title, isDraft);
+    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("__");
+    let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
+    if (!isDraft) {
+        hide("btn-release-draft");
+    } else {
+        unhide("btn-release-draft");
+    }
     return loadedFile;
 }
 
@@ -329,6 +416,7 @@ function uploadPortrait() {
 }
 
 function handleFiles(files) {
+    console.log("Files for upload: " + files.length);
     files = [...files];
     files.forEach(uploadFile);
     files.forEach(previewFile);
@@ -379,12 +467,16 @@ function uploadFile(file) {
 
 function previewFile(file) {
     let reader = new FileReader();
+    const preview = document.getElementById("upload-preview");
     reader.readAsDataURL(file);
     reader.onloadend = function () {
         let img = document.createElement('img');
         img.src = reader.result;
         img.width = 128;
-        document.getElementById("upload-preview").appendChild(img);
+        preview.appendChild(img);
+        let p = document.createElement('p');
+        p.innerText = file.name;
+        preview.appendChild(p);
     }
 }
 
@@ -450,7 +542,6 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
-    console.log("Saving and Updating...");
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
@@ -461,6 +552,7 @@ function saveAndUpdate() {
         method: "POST",
         body: formJson
     });
+    popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
 }
 
 /**
@@ -469,6 +561,7 @@ function saveAndUpdate() {
 function updateElement(domElement, html) {
     domElement.innerHTML = html;
 }
+
 
 /**
  * Hide an element with the given ID (will getElementById)
@@ -528,7 +621,6 @@ function popupMessage(messageText, status) {
             break;
     }
     statusIcon.classList.value = ["mdi", "is-size-3", ...statusClass].join(" ");
-    console.log(status + ", " + messageText);
     showModal(modal);
 }
 

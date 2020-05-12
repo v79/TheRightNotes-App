@@ -4,8 +4,6 @@ import kotlinx.html.*
 import kotlinx.html.dom.createHTMLDocument
 import kotlinx.html.dom.serialize
 import kotlinx.io.ByteArrayOutputStream
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
@@ -19,6 +17,8 @@ private val imageMimeTypes: Set<String> = setOf(
 		"image/jpeg",
 		"image/jfif"
 )
+
+private val DRAFT = "__"
 
 val api = api<RightNotesComponents> {
 
@@ -36,7 +36,7 @@ val api = api<RightNotesComponents> {
 					span(classes = "post-list-item") {
 						onClick = "loadMarkdownFile('${sourceFile.source}')"
 						title = "$kb kb"
-						+sourceFile.name.removePrefix("_").replace("'", "\\'")
+						+sourceFile.name.removePrefix(DRAFT).replace("'", "\\'").removeSuffix(".md")
 						if (sourceFile.draft) {
 							span(classes = "tag is-light draft") {
 								+"DRAFT"
@@ -70,8 +70,8 @@ val api = api<RightNotesComponents> {
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
 		println(yamlPost)
 		// need to sanitise the file name?
-		val fileName = "_" + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
-		// prepending "_" makes it a draft file
+		// prepending "__" makes it a draft file
+		val fileName = DRAFT + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
 		val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
 		val status = if(result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
 		req.responseBuilder().status(status).build(fileName)
@@ -89,28 +89,19 @@ val api = api<RightNotesComponents> {
 
 	get("/image-list") { req ->
 		val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
-
-//		val fakeImages = arrayListOf<String>("Louise-Farrenc.png", "Middle-aged-Richard-Strauss.png", "Aaron-Copland.png", "Dvorak.png")
-		val imageGallery = createHTMLDocument().ul(classes = "portrait-list") {
-			imageList.forEach { sourceFile ->
-				li {
-					figure(classes = "image is-96x96 is-rounded gallery-figure") {
-						img {
-							draggable = Draggable.htmlTrue
-							alt = sourceFile.name
-							src = "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}"
-							title = sourceFile.name
-							onDragStart = "dragstart_handler(event);"
-							onDragEnd = "dragend_handler(event);"
-						}
-						figcaption(classes = "is-small") {
-							+sourceFile.name
-						}
-					}
-				}
-			}
+		val galleryList = mutableListOf<GalleryImage>()
+		imageList.forEach { sourceFile ->
+			galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}",sourceFile.size))
 		}
-		req.returnHtml(imageGallery.serialize(true))
+
+		if (imageList.isNotEmpty()) {
+			val gallery = Gallery(galleryList)
+			val json = Json(JsonConfiguration.Stable)
+			val jsonData = json.stringify(Gallery.serializer(), gallery)
+			jsonData
+		} else {
+			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+		}
 	}
 
 	post("/release-from-draft") { req ->
@@ -130,7 +121,6 @@ val api = api<RightNotesComponents> {
 
 		} else {
 			val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
-//		val rotatedImage = Scalr.rotate(image, Scalr.Rotation.CW_90)
 			println("Upload image called with ${filename}, ${mimeType}, ${req.requireBinaryBody().size} bytes")
 			val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
 			val outputStream = ByteArrayOutputStream()
@@ -148,13 +138,20 @@ val api = api<RightNotesComponents> {
 			// store the processed file in github
 			gitService.createBinaryFile("v79","rightnotes","assets/images/scaled/${nameWithoutExtension}.png","master",scaledImage,false)
 
-			// transfer the processed file to S3 bucket
-			s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
+			// TODO: deal with this error message:
+			// org.kohsuke.github.HttpException: {"message":"Reference cannot be updated","documentation_url":"https://developer.github.com/v3/git/refs/#update-a-reference"}
 
-			req.responseBuilder()
-					.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
-					.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
-					.build(scaledImage)
+			// transfer the processed file to S3 bucket
+			val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
+
+			if(writtenToBucket) {
+				req.responseBuilder()
+						.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
+						.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
+						.build(scaledImage)
+			} else {
+				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+			}
 		}
 	}
 
@@ -185,55 +182,5 @@ class RightNotesComponentsImpl : RightNotesComponents {
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
-
-// is this really needed? Could just use FromGithub, below, instead?
-@Serializable
-class BasculePost(val path: String, val title: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>)
-
-/**
- * Oh what a tangled web we weave, when first we practice to deceive...
- */
-@Serializable
-class FromGithub(val title: String, val slug: String, val playlist: String?, val summary: String?, val composers: List<String>, val genres: List<String>) {
-	var body: String? = null
-}
-
-@Serializable
-class FromJson(val title: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
-
-	fun toMarkdown(): String {
-		val sb = StringBuilder()
-		sb.appendln("---")
-		sb.appendln("title: $title")
-		sb.appendln("slug: $slug")
-		sb.appendln("author: T W Davison")
-		sb.appendln("layout: post")
-		// TODO: sb.appendln("date: DATE")
-		sb.appendln("playlist: $playlist")
-
-		sb.append("genres: [")
-		genres?.forEachIndexed { i, g ->
-			sb.append(g)
-			if (i != genres.size - 1) {
-				sb.append(",")
-			}
-		}
-		sb.appendln("]")
-		sb.append("composers: [")
-		composers?.forEachIndexed { i, c ->
-			sb.append(c)
-			if (i != composers.size - 1) {
-				sb.append(",")
-			}
-		}
-		sb.appendln("]")
-		sb.appendln("summary: $summary")
-		sb.appendln("---")
-		sb.appendln(body)
-		return sb.toString()
-	}
-}
-
-data class GHSourceFile(val name: String, val source: String, val draft: Boolean, val fileSize: Long?)
 
 
