@@ -503,9 +503,15 @@ function generateSlug(elementToUpdate) {
 }
 
 function saveNewFile(newPostForm) {
-
     let form = document.getElementById(newPostForm);
     let formData = new FormData(form);
+    let playlist = formData.get("playlist");
+    const playlistPrefix = "spotify:playlist:";
+    if(playlist.startsWith(playlistPrefix)) {
+        playlist = playlist.substring(playlistPrefix.length);
+        formData.delete("playlist");
+        formData.append("playlist",playlist);
+    }
     let genres = formData.get("genres[]");
     let updatedGenres = genres.split(",");
     formData.delete("genres[]");
