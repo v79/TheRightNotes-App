@@ -24,6 +24,8 @@ private val DRAFT = "__"
 
 val api = api<RightNotesComponents> {
 
+	val SPOTIFY_SECRET = System.getenv("SPOTIFY_SECRET")
+
 	staticFiles {
 		path = "/"
 		indexFile = "index.html"
@@ -73,9 +75,9 @@ val api = api<RightNotesComponents> {
 		println(yamlPost)
 		// need to sanitise the file name?
 		// prepending "__" makes it a draft file
-		val fileName = DRAFT + yamlPost.title.replace(Regex("\\W")," ").trim() + ".md"
+		val fileName = DRAFT + yamlPost.title.replace(Regex("\\W"), " ").trim() + ".md"
 		val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
-		val status = if(result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
+		val status = if (result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
 		req.responseBuilder().status(status).build(fileName)
 	}
 
@@ -85,7 +87,7 @@ val api = api<RightNotesComponents> {
 		val json = Json(JsonConfiguration.Stable)
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
 
-		gitService.updateFile("v79","rightnotes","${yamlPost.path}","master",yamlPost)
+		gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
 		""
 	}
 
@@ -93,7 +95,7 @@ val api = api<RightNotesComponents> {
 		val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
 		val galleryList = mutableListOf<GalleryImage>()
 		imageList.forEach { sourceFile ->
-			galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}",sourceFile.size))
+			galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}", sourceFile.size))
 		}
 
 		if (imageList.isNotEmpty()) {
@@ -119,7 +121,7 @@ val api = api<RightNotesComponents> {
 		val (mimeType, _) = ContentType.parse(contentTypeHeader)
 		if (!imageMimeTypes.contains(mimeType)) {
 			println("Content-Type must be one of $imageMimeTypes")
-			req.responseBuilder().status(HttpStatus.SC_BAD_REQUEST).header("Content-Type","text/plain").build("Image must be a JPG, PNG or JFIF file.")
+			req.responseBuilder().status(HttpStatus.SC_BAD_REQUEST).header("Content-Type", "text/plain").build("Image must be a JPG, PNG or JFIF file.")
 
 		} else {
 			val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
@@ -130,23 +132,23 @@ val api = api<RightNotesComponents> {
 			val byteArray = outputStream.toByteArray()
 
 			// store the original in git images folder first
-			gitService.createBinaryFile("v79","rightnotes","images/composers/${filename}","master",byteArray,false)
+			gitService.createBinaryFile("v79", "rightnotes", "images/composers/${filename}", "master", byteArray, false)
 			val scaledImage = imageService.scaleAndConvertImage(byteArray)
 
-			println("Scaled image created as a PNG: " +scaledImage.size)
+			println("Scaled image created as a PNG: " + scaledImage.size)
 
 			val nameWithoutExtension = filename.cleanUp()
 
 			// store the processed file in github
-			gitService.createBinaryFile("v79","rightnotes","assets/images/scaled/${nameWithoutExtension}.png","master",scaledImage,false)
+			gitService.createBinaryFile("v79", "rightnotes", "assets/images/scaled/${nameWithoutExtension}.png", "master", scaledImage, false)
 
 			// TODO: deal with this error message:
 			// org.kohsuke.github.HttpException: {"message":"Reference cannot be updated","documentation_url":"https://developer.github.com/v3/git/refs/#update-a-reference"}
 
 			// transfer the processed file to S3 bucket
-			val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png",scaledImage)
+			val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png", scaledImage)
 
-			if(writtenToBucket) {
+			if (writtenToBucket) {
 				req.responseBuilder()
 						.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
 						.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
@@ -157,31 +159,30 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
-	get("/spotify-token") {req ->
+	get("/spotify-token") { req ->
 		val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
-		val spotifySecret = "a71ffb04a41444c3b5e901d2b23bf071";
-		val x = spotifyClient + ":" + spotifySecret
+		val x = spotifyClient + ":" + SPOTIFY_SECRET
 		println("Getting spotify token for " + x)
 
 		val spotifyAuth = Base64.getEncoder().encode(x.toByteArray()).toString(Charset.defaultCharset())
 		println(spotifyAuth)
 
-		val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"),("Content-Type" to "application/x-www-form-urlencoded"),("Accept-Encoding" to "gzip")),data = "grant_type=client_credentials")
-		println("REQUEST: " + spotifyResponse.request.headers)
-		println(spotifyResponse.statusCode)
-		println(spotifyResponse.headers)
-		println(spotifyResponse.jsonObject)
-//		val token = spotifyResponse.jsonObject.getString("access_token")
-		req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type","text/plain").build(spotifyResponse.jsonObject.get("access_token"))
+		val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"), ("Content-Type" to "application/x-www-form-urlencoded"), ("Accept-Encoding" to "gzip")), data = "grant_type=client_credentials")
+
+		if(spotifyResponse.statusCode == HttpStatus.SC_OK) {
+			req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(spotifyResponse.jsonObject.get("access_token"))
+		} else {
+			req.responseBuilder().status(HttpStatus.SC_UNAUTHORIZED)
+		}
 	}
 
 }
 
 private fun String.cleanUp(): String {
 	val WORD_SEPARATOR = "-"
-	val leaf = this.substringBeforeLast(".").replace(" ",WORD_SEPARATOR)
+	val leaf = this.substringBeforeLast(".").replace(" ", WORD_SEPARATOR)
 	val titleCase = leaf.split(WORD_SEPARATOR).map { word ->
-		if(word.isEmpty()) word else Character.toTitleCase(word[0]) + word.substring(1).toLowerCase()
+		if (word.isEmpty()) word else Character.toTitleCase(word[0]) + word.substring(1).toLowerCase()
 	}.joinToString(WORD_SEPARATOR)
 	return titleCase
 }

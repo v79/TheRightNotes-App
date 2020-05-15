@@ -592,6 +592,7 @@ function copyToClipboard(elementName) {
     const valueToCopy = document.getElementById(elementName);
     valueToCopy.select();
     document.execCommand("copy");
+    // hide("track-list-dropdown-menu");
 }
 
 function generateSlug(elementToUpdate) {

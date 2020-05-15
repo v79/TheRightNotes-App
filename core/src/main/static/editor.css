@@ -53,5 +53,7 @@ figcaption {
 }
 
 .dropdown-menu {
-	min-width: 32rem;
+	min-width: 50rem;
+	left: -272px;
+	border: 1px solid #a1a1a1;
 }
