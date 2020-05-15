@@ -9,6 +9,8 @@ import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
 import ws.osiris.core.*
 import java.io.ByteArrayInputStream
+import java.nio.charset.Charset
+import java.util.*
 import javax.imageio.ImageIO
 
 
@@ -153,6 +155,24 @@ val api = api<RightNotesComponents> {
 				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
 			}
 		}
+	}
+
+	get("/spotify-token") {req ->
+		val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
+		val spotifySecret = "a71ffb04a41444c3b5e901d2b23bf071";
+		val x = spotifyClient + ":" + spotifySecret
+		println("Getting spotify token for " + x)
+
+		val spotifyAuth = Base64.getEncoder().encode(x.toByteArray()).toString(Charset.defaultCharset())
+		println(spotifyAuth)
+
+		val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"),("Content-Type" to "application/x-www-form-urlencoded"),("Accept-Encoding" to "gzip")),data = "grant_type=client_credentials")
+		println("REQUEST: " + spotifyResponse.request.headers)
+		println(spotifyResponse.statusCode)
+		println(spotifyResponse.headers)
+		println(spotifyResponse.jsonObject)
+//		val token = spotifyResponse.jsonObject.getString("access_token")
+		req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type","text/plain").build(spotifyResponse.jsonObject.get("access_token"))
 	}
 
 }

@@ -14,6 +14,9 @@ repositories {
 	maven {
 		url "https://kotlin.bintray.com/kotlinx"
 	}
+	maven {
+		url "https://jcenter.bintray.com/"
+	}
 }
 dependencies {
 	implementation platform("ws.osiris:osiris-bom:$osirisVersion")
@@ -39,6 +42,9 @@ dependencies {
 
 	// yaml
 	implementation "com.charleskorn.kaml:kaml:0.15.0"
+
+	// khttp for rest calls
+	implementation 'khttp:khttp:1.0.0'
 }
 
 osiris {

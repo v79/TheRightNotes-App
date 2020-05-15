@@ -61,7 +61,6 @@
 							<input class="input" type="text" placeholder="Search" name="composer-search"
 								   id="composer-search" onchange="filterGallery();" onkeyup="filterGallery();">
 							<span class="icon is-left mdi mdi-account-search-outline"></span>
-							</span>
 						</p>
 					</div>
 					<div class="panel-block">
@@ -69,7 +68,7 @@
 							<p id="image-gallery-loading-msg" class="is-loading"><em>Fetching composer portraits...</em>
 							</p>
 						</div>
-					</div>
+						</div>
 				</div>
 			</div>
 
@@ -161,6 +160,22 @@
 											</div>
 										</div>
 									</div>
+									<div class="level-item">
+
+										<div id="tracks-list-dropdown" class="dropdown" onclick="toggleTrackList()">
+											<div class="dropdown-trigger">
+												<button class="button" aria-haspopup="true" aria-controls="dropdown-menu" type="button">
+													<span class="icon is-small mdi mdi-music-box-multiple-outline"></span>
+													<span>Tracks</span>
+												</button>
+											</div>
+											<div class="dropdown-menu" id="dropdown-menu" role="menu">
+												<div id="tmp-track-listing" class="dropdown-content">
+												</div>
+											</div>
+										</div>
+
+									</div>
 								</div>
 								<div class="level-right">
 									<div class="level-item">
@@ -170,7 +185,6 @@
 									</div>
 								</div>
 							</div>
-
 
 						</fieldset>
 						<fieldset class="markdown-text">

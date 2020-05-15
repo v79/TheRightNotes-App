@@ -5,6 +5,8 @@
  */
 let gallery;
 let initialGalleryElement;
+let tracklist;
+let spotifyToken;
 
 function loadImageGallery() {
     let promise = fetch("/image-list")
@@ -38,11 +40,11 @@ function buildGalleryList(list) {
 
     // on first load, this will be null, so set it to our new list
     // we can use this to 'reset'
-    if(!initialGalleryElement) {
+    if (!initialGalleryElement) {
         initialGalleryElement = ul;
     }
 
-    if(imageGalleryLoading) {
+    if (imageGalleryLoading) {
         imageGalleryDom.replaceChild(ul, imageGalleryLoading);
     } else {
         imageGalleryDom.replaceChild(ul, document.getElementById("filtered-list"));
@@ -71,7 +73,7 @@ function buildGalleryImage(image, ul) {
 
 function filterGallery() {
     const searchInput = document.getElementById("composer-search").value;
-    if(searchInput.length > 2) {
+    if (searchInput.length > 2) {
         console.log("Filtering for " + searchInput);
         let filtered = searchGallery(searchInput);
         buildGalleryList(filtered);
@@ -102,6 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadFileList();
     loadImageGallery();
+    spotifyToken = getSpotifyToken();
 });
 
 
@@ -380,6 +383,9 @@ function updateMarkdownEditor(data, disabled) {
     } else {
         unhide("btn-release-draft");
     }
+
+    // get the track listing
+    getPlaylistTracks();
     return loadedFile;
 }
 
@@ -492,6 +498,102 @@ function resetUploadModal() {
 /************ */
 
 
+/**
+ * Spotify interactions
+ */
+function getSpotifyToken() {
+    let promise = fetch("/spotify-token", {
+        method: "GET",
+        headers: {
+            'Accept': 'text/plain',
+        }
+    }).then((response) => {
+        return response.text();
+    })
+        .then((data) => {
+            console.log("data: " + data);
+            spotifyToken = data
+        });
+}
+
+function toggleTrackList() {
+    const dropdownElement = document.getElementById("tracks-list-dropdown");
+    dropdownElement.classList.toggle("is-active");
+}
+
+
+function getPlaylistTracks() {
+    const tracksElement = document.getElementById("tmp-track-listing");
+    const playlistId = document.getElementById("form-meta-playlist").value;
+
+    //curl -X "GET" "https://api.spotify.com/v1/playlists/1hnFrnzIhBZk84cQ9M6bth/tracks" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer BQCOx-Kx-IBTSs-gZ8TquK9FNez0ZJSAXjFy8q9kBMP-kqd7kjmdhUJmjcs4UNcAxmNuX1y4YkoLUpLHfoOLWSwmjL6H8roHdJJdseJjJLWFkKAMeLB7DceRJjSQEwflDdvhRVpZGYQ"
+
+    let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+    let oldListing = document.getElementById("track-listing");
+    let promise = fetch(fetchUrl, {
+        method: "GET",
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${spotifyToken}`
+        }
+    }).then((response) => {
+        return response.json();
+    })
+        .then((data => {
+            tracklist = data.items;
+           buildTrackListing(oldListing,tracksElement,tracklist)
+        }));
+}
+
+function buildTrackListing(oldlisting,tracksElement,trackItems) {
+    const trackListDiv = document.createElement("div");
+    trackListDiv.id = "tmp-track-listing";
+    for (let trackItem of trackItems) {
+        let track = trackItem.track;
+        let trackCode = track.id;
+        let trackName = track.name;
+        let trackItemDiv = document.createElement("div");
+        trackItemDiv.classList.add("dropdown-item");
+        let label = document.createElement("span");
+        label.innerText = `${trackName}`;
+        trackItemDiv.appendChild(label);
+        let trackItemSpan = document.createElement("span");
+        trackItemSpan.id = `track-id-${trackCode}`;
+        let trackItemInput = document.createElement("input");
+        trackItemInput.name = `track-name-${trackCode}`;
+        trackItemInput.id = `track-name-${trackCode}`;
+        trackItemInput.classList.add("is-pulled-right","is-small");
+        trackItemInput.value = `spotify:track:${trackCode}`;
+        trackItemSpan.classList.add("icon","is-right","mdi", "mdi-content-copy","is-pulled-right");
+        trackItemDiv.appendChild(trackItemInput);
+        trackItemDiv.appendChild(trackItemSpan);
+        trackListDiv.appendChild(trackItemDiv);
+    }
+    if (typeof oldlisting === 'undefined') {
+        tracksElement.replaceChild(trackListDiv, oldListing);
+    } else {
+        tracksElement.appendChild(trackListDiv);
+    }
+    console.log("I want to add a click listener to the span on each item");
+    for(let dropdownItem of trackListDiv.childNodes) {
+        for (let item of dropdownItem.childNodes) {
+           console.log("Item " + item.nodeName);
+           if(item.nodeName === "INPUT") {
+               console.log("adding click listener to " + item.nodeName + " for id " + item.id);
+               console.dir(item);
+               item.addEventListener("click",function(){copyToClipboard(item.id)});
+           }
+        }
+    }
+}
+
+function copyToClipboard(elementName) {
+    const valueToCopy = document.getElementById(elementName);
+    valueToCopy.select();
+    document.execCommand("copy");
+}
+
 function generateSlug(elementToUpdate) {
     console.log("Generating slug");
     const newFormTitle = document.getElementById("new-post-title");
@@ -507,10 +609,10 @@ function saveNewFile(newPostForm) {
     let formData = new FormData(form);
     let playlist = formData.get("playlist");
     const playlistPrefix = "spotify:playlist:";
-    if(playlist.startsWith(playlistPrefix)) {
+    if (playlist.startsWith(playlistPrefix)) {
         playlist = playlist.substring(playlistPrefix.length);
         formData.delete("playlist");
-        formData.append("playlist",playlist);
+        formData.append("playlist", playlist);
     }
     let genres = formData.get("genres[]");
     let updatedGenres = genres.split(",");

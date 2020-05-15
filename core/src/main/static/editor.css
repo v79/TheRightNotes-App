@@ -8,7 +8,6 @@ ul.portrait-list {
 
 ul.portrait-list > li {
 	display: inline-block;
-	vertical-align: top;
 	margin: 0;
 	padding: 2px;
 }
@@ -51,4 +50,8 @@ figcaption {
 
 #image-files {
 	display: none;
+}
+
+.dropdown-menu {
+	min-width: 32rem;
 }
