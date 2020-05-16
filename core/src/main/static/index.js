@@ -1,13 +1,39 @@
 "use strict";
 
 /**
- * On document load activities to populate file list and image gallery
+ * Some global definitions
  */
 let gallery;
 let initialGalleryElement;
 let tracklist;
 let spotifyToken;
 
+/**
+ * On document load activities to populate file list and image gallery.
+ * Fetches spotify auth token
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    function loadFileList() {
+        const fileListDom = document.querySelector("#file-list");
+
+        let promise = fetch("/post-list")
+            .then((response) => response.text())
+            .then(data => updateElement(fileListDom, data));
+    }
+
+    loadFileList();
+    loadImageGallery();
+    spotifyToken = getSpotifyToken();
+});
+
+/**
+ * Image gallery
+ */
+
+/**
+ * Load JSON representing the composer portrait gallery
+ * @returns JSON object containing list of composers
+ */
 function loadImageGallery() {
     let promise = fetch("/image-list")
         .then((response) => {
@@ -18,15 +44,13 @@ function loadImageGallery() {
             buildGalleryList(list);
             gallery = list;
         }))
-    // let promise = fetch("/image-list")
-    //     .then((response) =>
-    //         gallery = JSON.parse(response.json()))
-    //     .then((x) =>
-    //         console.log("x: " + x + ", gallery: " + gallery))
-    //     .then(data => updateElement(imageGalleryDom, data));
     return gallery;
 }
 
+/**
+ * Construct HTML for the composer portrait gallery
+ * @param list JSON list of composers
+ */
 function buildGalleryList(list) {
     const imageGalleryLoading = document.getElementById("image-gallery-loading-msg");
     const imageGalleryDom = document.querySelector("#image-gallery");
@@ -51,6 +75,11 @@ function buildGalleryList(list) {
     }
 }
 
+/**
+ * Construct the HTML list item for a single composer portrait
+ * @param image JSON representing a single composer image file
+ * @param ul containing UL DOMElement to attach the list item to
+ */
 function buildGalleryImage(image, ul) {
     var li = document.createElement("li");
     var figure = document.createElement("figure");
@@ -71,6 +100,10 @@ function buildGalleryImage(image, ul) {
     ul.appendChild(li);
 }
 
+/**
+ * Action to filter the list of shown composers, based on user input. Calls searchGallery to get sub-list then rebuilds the gallery.
+ * Only responds to queries of 3 or more characters.
+ */
 function filterGallery() {
     const searchInput = document.getElementById("composer-search").value;
     if (searchInput.length > 2) {
@@ -84,6 +117,11 @@ function filterGallery() {
     }
 }
 
+/**
+ * Search the gallery list file names for the given query
+ * @param query
+ * @returns foundItems sub-list of gallery items which match the query
+ */
 function searchGallery(query) {
     let lower = query.toLowerCase();
     let foundItems = gallery.filter(image => {
@@ -92,21 +130,6 @@ function searchGallery(query) {
     )
     return foundItems;
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-    function loadFileList() {
-        const fileListDom = document.querySelector("#file-list");
-
-        let promise = fetch("/post-list")
-            .then((response) => response.text())
-            .then(data => updateElement(fileListDom, data));
-    }
-
-    loadFileList();
-    loadImageGallery();
-    spotifyToken = getSpotifyToken();
-});
-
 
 /**
  * Drag-and-drop activities
@@ -351,6 +374,7 @@ const dropArea = document.getElementById("image-upload-drop-area");
  * button actions
  */
 function loadMarkdownFile(fileName) {
+    tracklist = null;
     let promise = fetch("/load-markdown", {method: "POST", body: fileName})
         .then((response) => response.text())
         .then((data) => (markdownFile = updateMarkdownEditor(data, false)));
@@ -523,13 +547,10 @@ function toggleTrackList() {
 
 
 function getPlaylistTracks() {
-    const tracksElement = document.getElementById("tmp-track-listing");
+    const trackListingDiv = document.getElementById("track-listing-container");
     const playlistId = document.getElementById("form-meta-playlist").value;
 
-    //curl -X "GET" "https://api.spotify.com/v1/playlists/1hnFrnzIhBZk84cQ9M6bth/tracks" -H "Accept: application/json" -H "Content-Type: application/json" -H "Authorization: Bearer BQCOx-Kx-IBTSs-gZ8TquK9FNez0ZJSAXjFy8q9kBMP-kqd7kjmdhUJmjcs4UNcAxmNuX1y4YkoLUpLHfoOLWSwmjL6H8roHdJJdseJjJLWFkKAMeLB7DceRJjSQEwflDdvhRVpZGYQ"
-
     let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
-    let oldListing = document.getElementById("track-listing");
     let promise = fetch(fetchUrl, {
         method: "GET",
         headers: {
@@ -542,13 +563,15 @@ function getPlaylistTracks() {
     })
         .then((data => {
             tracklist = data.items;
-           buildTrackListing(oldListing,tracksElement,tracklist)
+           buildTrackListing(trackListingDiv,tracklist)
         }));
 }
 
-function buildTrackListing(oldlisting,tracksElement,trackItems) {
-    const trackListDiv = document.createElement("div");
-    trackListDiv.id = "tmp-track-listing";
+function buildTrackListing(trackListingDiv,trackItems) {
+    const newTrackListingDiv = document.createElement("div");
+    const oldListing = document.getElementById("tmp-track-listing");
+
+    newTrackListingDiv.id = "tmp-track-listing";
     for (let trackItem of trackItems) {
         let track = trackItem.track;
         let trackCode = track.id;
@@ -568,15 +591,15 @@ function buildTrackListing(oldlisting,tracksElement,trackItems) {
         trackItemSpan.classList.add("icon","is-right","mdi", "mdi-content-copy","is-pulled-right");
         trackItemDiv.appendChild(trackItemInput);
         trackItemDiv.appendChild(trackItemSpan);
-        trackListDiv.appendChild(trackItemDiv);
+        newTrackListingDiv.appendChild(trackItemDiv);
     }
-    if (typeof oldlisting === 'undefined') {
-        tracksElement.replaceChild(trackListDiv, oldListing);
+    if (typeof oldListing === 'undefined' || oldListing === null) {
+        trackListingDiv.appendChild(newTrackListingDiv);
     } else {
-        tracksElement.appendChild(trackListDiv);
+        trackListingDiv.replaceChild(newTrackListingDiv, oldListing);
     }
     console.log("I want to add a click listener to the span on each item");
-    for(let dropdownItem of trackListDiv.childNodes) {
+    for(let dropdownItem of newTrackListingDiv.childNodes) {
         for (let item of dropdownItem.childNodes) {
            console.log("Item " + item.nodeName);
            if(item.nodeName === "INPUT") {
@@ -592,7 +615,6 @@ function copyToClipboard(elementName) {
     const valueToCopy = document.getElementById(elementName);
     valueToCopy.select();
     document.execCommand("copy");
-    // hide("track-list-dropdown-menu");
 }
 
 function generateSlug(elementToUpdate) {
