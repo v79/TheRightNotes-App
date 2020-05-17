@@ -107,7 +107,6 @@ function buildGalleryImage(image, ul) {
 function filterGallery() {
     const searchInput = document.getElementById("composer-search").value;
     if (searchInput.length > 2) {
-        console.log("Filtering for " + searchInput);
         let filtered = searchGallery(searchInput);
         buildGalleryList(filtered);
     } else {
@@ -136,7 +135,6 @@ function searchGallery(query) {
  * @param ev the drag event
  */
 function dragstart_handler(ev) {
-    console.log("dragStart " + JSON.stringify(ev));
     // Change the source element's background color to signify drag has started
     // Add the id of the drag source element to the drag data payload so
     // it is available when the drop event is fired
@@ -174,7 +172,8 @@ function dragend_handler(ev) {
 const STATUS = {
     OK: 'ok',
     ERROR: 'error',
-    WARNING: 'warning'
+    WARNING: 'warning',
+    PROCESSING: 'processing'
 }
 
 /**
@@ -298,7 +297,6 @@ class ModalWizard {
     }
 
     prevPage() {
-        console.log("Prev clicked: on " + this.currentPage + " of " + this.pageCount);
         if (this.currentPage <= this.pageCount) {
             let nextPage = this.pages[this.currentPage];
             let prevPage = this.pages[this.currentPage - 1];
@@ -327,7 +325,6 @@ class ModalWizard {
         }
         this.currentPage = 0;
         for (let page of this.pages) {
-            console.log("Hiding page " + page.id);
             hide(page.id);
         }
         unhide(this.pages[this.currentPage].fieldset.id);
@@ -446,7 +443,6 @@ function uploadPortrait() {
 }
 
 function handleFiles(files) {
-    console.log("Files for upload: " + files.length);
     files = [...files];
     files.forEach(uploadFile);
     files.forEach(previewFile);
@@ -535,7 +531,6 @@ function getSpotifyToken() {
         return response.text();
     })
         .then((data) => {
-            console.log("data: " + data);
             spotifyToken = data
         });
 }
@@ -563,11 +558,11 @@ function getPlaylistTracks() {
     })
         .then((data => {
             tracklist = data.items;
-           buildTrackListing(trackListingDiv,tracklist)
+            buildTrackListing(trackListingDiv, tracklist)
         }));
 }
 
-function buildTrackListing(trackListingDiv,trackItems) {
+function buildTrackListing(trackListingDiv, trackItems) {
     const newTrackListingDiv = document.createElement("div");
     const oldListing = document.getElementById("tmp-track-listing");
 
@@ -586,9 +581,9 @@ function buildTrackListing(trackListingDiv,trackItems) {
         let trackItemInput = document.createElement("input");
         // trackItemInput.name = `track-name-${trackCode}`;
         trackItemInput.id = `track-name-${trackCode}`;
-        trackItemInput.classList.add("is-pulled-right","is-small");
+        trackItemInput.classList.add("is-pulled-right", "is-small");
         trackItemInput.value = `spotify:track:${trackCode}`;
-        trackItemSpan.classList.add("icon","is-right","mdi", "mdi-content-copy","is-pulled-right");
+        trackItemSpan.classList.add("icon", "is-right", "mdi", "mdi-content-copy", "is-pulled-right");
         trackItemDiv.appendChild(trackItemInput);
         trackItemDiv.appendChild(trackItemSpan);
         newTrackListingDiv.appendChild(trackItemDiv);
@@ -598,15 +593,13 @@ function buildTrackListing(trackListingDiv,trackItems) {
     } else {
         trackListingDiv.replaceChild(newTrackListingDiv, oldListing);
     }
-    console.log("I want to add a click listener to the span on each item");
-    for(let dropdownItem of newTrackListingDiv.childNodes) {
+    for (let dropdownItem of newTrackListingDiv.childNodes) {
         for (let item of dropdownItem.childNodes) {
-           console.log("Item " + item.nodeName);
-           if(item.nodeName === "INPUT") {
-               console.log("adding click listener to " + item.nodeName + " for id " + item.id);
-               console.dir(item);
-               item.addEventListener("click",function(){copyToClipboard(item.id)});
-           }
+            if (item.nodeName === "INPUT") {
+                item.addEventListener("click", function () {
+                    copyToClipboard(item.id)
+                });
+            }
         }
     }
 }
@@ -618,7 +611,6 @@ function copyToClipboard(elementName) {
 }
 
 function generateSlug(elementToUpdate) {
-    console.log("Generating slug");
     const newFormTitle = document.getElementById("new-post-title");
     const newFormSlug = document.getElementById("new-post-slug");
     var title = newFormTitle.value;
@@ -673,6 +665,7 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
+    popupMessage("Saving...", STATUS.PROCESSING);
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
@@ -683,13 +676,17 @@ function saveAndUpdate() {
         method: "POST",
         body: formJson
     }).then((response) => {
-        if(response.status === 200 || response.status === 201) {
-            console.log(response.body);
+        return response.json();
+    }).then((data) => {
+        if (data.status === 200 || data.status === 201) {
             popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
         } else {
-            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.",STATUS.ERROR)
+            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
         }
-    }).catch((reason => popupMessage("There was an unspecified problem saving" + markdownFile.title + ", please try again later.",STATUS.ERROR)));
+    }).catch((error) => {
+        console.log("SaveAndUpdate error: " + error);
+        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ", please try again later.\n" + error.message, STATUS.ERROR);
+    });
 
 }
 
@@ -755,6 +752,10 @@ function popupMessage(messageText, status) {
             statusClass = ["mdi-alert-circle-outline", "has-text-warning"];
             break;
         }
+        case STATUS.PROCESSING: {
+            statusClass = ["mdi-spin", "mdi-autorenew", "has-text-info"]
+            break;
+        }
         default:
             break;
     }
@@ -789,7 +790,7 @@ function formToJson(formData) {
             object[key].push(value);
         }
     });
-    console.log(JSON.stringify(object));
+    // console.log(JSON.stringify(object));
     return JSON.stringify(object);
 }
 

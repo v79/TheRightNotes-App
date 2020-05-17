@@ -134,7 +134,7 @@ class GitService : ComponentsProvider {
 	}
 
 	fun updateFile(userName: String,repoName: String,path: String,branchRef: String,data: FromJson,test: Boolean = false): AppResponse {
-		val appResponse: AppResponse = AppResponse(HttpStatus.SC_ACCEPTED,path)
+		var appResponse: AppResponse
 		println("Attempting to commit $path to $repoName on branch $branchRef")
 		if (!test) {
 			try {
@@ -151,15 +151,15 @@ class GitService : ComponentsProvider {
 						.message("TheRightNotes-App: Updating existing file $path")
 						.create()
 				ref.updateTo(commit.shA1)
-				appResponse.status = HttpStatus.SC_OK
+				appResponse = AppResponse(HttpStatus.SC_OK,path);
 			} catch (ioe: IOException) {
-				appResponse.status = HttpStatus.SC_INTERNAL_SERVER_ERROR
+				appResponse = AppResponse(HttpStatus.SC_BAD_REQUEST)
 				appResponse.message = ioe.message
 				println(ioe)
 			}
 		} else {
 			println("TEST: was going to save, but didn't")
-			appResponse.status = HttpStatus.SC_NOT_IMPLEMENTED
+			appResponse = AppResponse(HttpStatus.SC_NOT_IMPLEMENTED)
 			appResponse.message = "Call was made in test mode; nothing was saved."
 		}
 		return appResponse
