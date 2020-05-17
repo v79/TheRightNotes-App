@@ -82,13 +82,13 @@ val api = api<RightNotesComponents> {
 	}
 
 	post("/save-and-update") { req ->
-		println("Going to update existing file")
 		val postContents = req.body<String>()
 		val json = Json(JsonConfiguration.Stable)
 		val yamlPost = json.parse(FromJson.serializer(), postContents)
+		println("Updating ${yamlPost.path} in Github")
 
-		gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
-		""
+		val appResponse = gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
+		req.responseBuilder().status(appResponse.status).build(appResponse.message)
 	}
 
 	get("/image-list") { req ->

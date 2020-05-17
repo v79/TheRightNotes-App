@@ -584,7 +584,7 @@ function buildTrackListing(trackListingDiv,trackItems) {
         let trackItemSpan = document.createElement("span");
         trackItemSpan.id = `track-id-${trackCode}`;
         let trackItemInput = document.createElement("input");
-        trackItemInput.name = `track-name-${trackCode}`;
+        // trackItemInput.name = `track-name-${trackCode}`;
         trackItemInput.id = `track-name-${trackCode}`;
         trackItemInput.classList.add("is-pulled-right","is-small");
         trackItemInput.value = `spotify:track:${trackCode}`;
@@ -682,8 +682,15 @@ function saveAndUpdate() {
     let promise = fetch("/save-and-update", {
         method: "POST",
         body: formJson
-    });
-    popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+    }).then((response) => {
+        if(response.status === 200 || response.status === 201) {
+            console.log(response.body);
+            popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+        } else {
+            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.",STATUS.ERROR)
+        }
+    }).catch((reason => popupMessage("There was an unspecified problem saving" + markdownFile.title + ", please try again later.",STATUS.ERROR)));
+
 }
 
 /**
