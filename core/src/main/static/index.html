@@ -9,8 +9,45 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
 	<link rel="stylesheet" href="editor.css">
 	<script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+
+	<script>
+		function onLoad() {
+            let awsAccountId = '086949310404';
+            let awsRegion = 'eu-west-2';
+            let cognitoClientId = '1uvo4vb6qqigr0ebj4ppv1nlhu';
+            let apiId = 'ru93q91hc7';
+
+            let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
+                `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
+                `response_type=token&scope=email+openid+phone+profile`;
+
+            let idToken = parseIdToken();
+            console.log(`idToken: ${idToken}`);
+
+            if (idToken) {
+                document.getElementById('msg').innerText = 'Logged in';
+                document.getElementById('requestButton').disabled = false;
+                return;
+            }
+            // not logged in - redirect to login page
+            console.log(`not logged in, redirecting to ${loginUrl}`);
+            window.location = loginUrl;
+        }
+
+        function parseIdToken() {
+            if (window.location.hash) {
+                let hash = window.location.hash.substr(1);
+                let regex = /id_token=([^&]*)/;
+                let match = hash.match(regex);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+	</script>
 </head>
-<body>
+<body onload="onLoad()">
 <section id="rn-header">
 	<div class="container">
 		<div class="level">
