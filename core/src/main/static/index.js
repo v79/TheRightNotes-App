@@ -1,11 +1,39 @@
 "use strict";
 
 /**
- * On document load activities to populate file list and image gallery
+ * Some global definitions
  */
 let gallery;
 let initialGalleryElement;
+let tracklist;
+let spotifyToken;
 
+/**
+ * On document load activities to populate file list and image gallery.
+ * Fetches spotify auth token
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    function loadFileList() {
+        const fileListDom = document.querySelector("#file-list");
+
+        let promise = fetch("/post-list")
+            .then((response) => response.text())
+            .then(data => updateElement(fileListDom, data));
+    }
+
+    loadFileList();
+    loadImageGallery();
+    spotifyToken = getSpotifyToken();
+});
+
+/**
+ * Image gallery
+ */
+
+/**
+ * Load JSON representing the composer portrait gallery
+ * @returns JSON object containing list of composers
+ */
 function loadImageGallery() {
     let promise = fetch("/image-list")
         .then((response) => {
@@ -16,15 +44,13 @@ function loadImageGallery() {
             buildGalleryList(list);
             gallery = list;
         }))
-    // let promise = fetch("/image-list")
-    //     .then((response) =>
-    //         gallery = JSON.parse(response.json()))
-    //     .then((x) =>
-    //         console.log("x: " + x + ", gallery: " + gallery))
-    //     .then(data => updateElement(imageGalleryDom, data));
     return gallery;
 }
 
+/**
+ * Construct HTML for the composer portrait gallery
+ * @param list JSON list of composers
+ */
 function buildGalleryList(list) {
     const imageGalleryLoading = document.getElementById("image-gallery-loading-msg");
     const imageGalleryDom = document.querySelector("#image-gallery");
@@ -38,17 +64,22 @@ function buildGalleryList(list) {
 
     // on first load, this will be null, so set it to our new list
     // we can use this to 'reset'
-    if(!initialGalleryElement) {
+    if (!initialGalleryElement) {
         initialGalleryElement = ul;
     }
 
-    if(imageGalleryLoading) {
+    if (imageGalleryLoading) {
         imageGalleryDom.replaceChild(ul, imageGalleryLoading);
     } else {
         imageGalleryDom.replaceChild(ul, document.getElementById("filtered-list"));
     }
 }
 
+/**
+ * Construct the HTML list item for a single composer portrait
+ * @param image JSON representing a single composer image file
+ * @param ul containing UL DOMElement to attach the list item to
+ */
 function buildGalleryImage(image, ul) {
     var li = document.createElement("li");
     var figure = document.createElement("figure");
@@ -69,10 +100,13 @@ function buildGalleryImage(image, ul) {
     ul.appendChild(li);
 }
 
+/**
+ * Action to filter the list of shown composers, based on user input. Calls searchGallery to get sub-list then rebuilds the gallery.
+ * Only responds to queries of 3 or more characters.
+ */
 function filterGallery() {
     const searchInput = document.getElementById("composer-search").value;
-    if(searchInput.length > 2) {
-        console.log("Filtering for " + searchInput);
+    if (searchInput.length > 2) {
         let filtered = searchGallery(searchInput);
         buildGalleryList(filtered);
     } else {
@@ -82,6 +116,11 @@ function filterGallery() {
     }
 }
 
+/**
+ * Search the gallery list file names for the given query
+ * @param query
+ * @returns foundItems sub-list of gallery items which match the query
+ */
 function searchGallery(query) {
     let lower = query.toLowerCase();
     let foundItems = gallery.filter(image => {
@@ -91,26 +130,11 @@ function searchGallery(query) {
     return foundItems;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    function loadFileList() {
-        const fileListDom = document.querySelector("#file-list");
-
-        let promise = fetch("/post-list")
-            .then((response) => response.text())
-            .then(data => updateElement(fileListDom, data));
-    }
-
-    loadFileList();
-    loadImageGallery();
-});
-
-
 /**
  * Drag-and-drop activities
  * @param ev the drag event
  */
 function dragstart_handler(ev) {
-    console.log("dragStart " + JSON.stringify(ev));
     // Change the source element's background color to signify drag has started
     // Add the id of the drag source element to the drag data payload so
     // it is available when the drop event is fired
@@ -148,7 +172,8 @@ function dragend_handler(ev) {
 const STATUS = {
     OK: 'ok',
     ERROR: 'error',
-    WARNING: 'warning'
+    WARNING: 'warning',
+    PROCESSING: 'processing'
 }
 
 /**
@@ -272,7 +297,6 @@ class ModalWizard {
     }
 
     prevPage() {
-        console.log("Prev clicked: on " + this.currentPage + " of " + this.pageCount);
         if (this.currentPage <= this.pageCount) {
             let nextPage = this.pages[this.currentPage];
             let prevPage = this.pages[this.currentPage - 1];
@@ -301,7 +325,6 @@ class ModalWizard {
         }
         this.currentPage = 0;
         for (let page of this.pages) {
-            console.log("Hiding page " + page.id);
             hide(page.id);
         }
         unhide(this.pages[this.currentPage].fieldset.id);
@@ -348,6 +371,7 @@ const dropArea = document.getElementById("image-upload-drop-area");
  * button actions
  */
 function loadMarkdownFile(fileName) {
+    tracklist = null;
     let promise = fetch("/load-markdown", {method: "POST", body: fileName})
         .then((response) => response.text())
         .then((data) => (markdownFile = updateMarkdownEditor(data, false)));
@@ -380,6 +404,9 @@ function updateMarkdownEditor(data, disabled) {
     } else {
         unhide("btn-release-draft");
     }
+
+    // get the track listing
+    getPlaylistTracks();
     return loadedFile;
 }
 
@@ -416,7 +443,6 @@ function uploadPortrait() {
 }
 
 function handleFiles(files) {
-    console.log("Files for upload: " + files.length);
     files = [...files];
     files.forEach(uploadFile);
     files.forEach(previewFile);
@@ -492,8 +518,99 @@ function resetUploadModal() {
 /************ */
 
 
+/**
+ * Spotify interactions
+ */
+function getSpotifyToken() {
+    let promise = fetch("/spotify-token", {
+        method: "GET",
+        headers: {
+            'Accept': 'text/plain',
+        }
+    }).then((response) => {
+        return response.text();
+    })
+        .then((data) => {
+            spotifyToken = data
+        });
+}
+
+function toggleTrackList() {
+    const dropdownElement = document.getElementById("tracks-list-dropdown");
+    dropdownElement.classList.toggle("is-active");
+}
+
+
+function getPlaylistTracks() {
+    const trackListingDiv = document.getElementById("track-listing-container");
+    const playlistId = document.getElementById("form-meta-playlist").value;
+
+    let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+    let promise = fetch(fetchUrl, {
+        method: "GET",
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${spotifyToken}`
+        }
+    }).then((response) => {
+        return response.json();
+    })
+        .then((data => {
+            tracklist = data.items;
+            buildTrackListing(trackListingDiv, tracklist)
+        }));
+}
+
+function buildTrackListing(trackListingDiv, trackItems) {
+    const newTrackListingDiv = document.createElement("div");
+    const oldListing = document.getElementById("tmp-track-listing");
+
+    newTrackListingDiv.id = "tmp-track-listing";
+    for (let trackItem of trackItems) {
+        let track = trackItem.track;
+        let trackCode = track.id;
+        let trackName = track.name;
+        let trackItemDiv = document.createElement("div");
+        trackItemDiv.classList.add("dropdown-item");
+        let label = document.createElement("span");
+        label.innerText = `${trackName}`;
+        trackItemDiv.appendChild(label);
+        let trackItemSpan = document.createElement("span");
+        trackItemSpan.id = `track-id-${trackCode}`;
+        let trackItemInput = document.createElement("input");
+        // trackItemInput.name = `track-name-${trackCode}`;
+        trackItemInput.id = `track-name-${trackCode}`;
+        trackItemInput.classList.add("is-pulled-right", "is-small");
+        trackItemInput.value = `spotify:track:${trackCode}`;
+        trackItemSpan.classList.add("icon", "is-right", "mdi", "mdi-content-copy", "is-pulled-right");
+        trackItemDiv.appendChild(trackItemInput);
+        trackItemDiv.appendChild(trackItemSpan);
+        newTrackListingDiv.appendChild(trackItemDiv);
+    }
+    if (typeof oldListing === 'undefined' || oldListing === null) {
+        trackListingDiv.appendChild(newTrackListingDiv);
+    } else {
+        trackListingDiv.replaceChild(newTrackListingDiv, oldListing);
+    }
+    for (let dropdownItem of newTrackListingDiv.childNodes) {
+        for (let item of dropdownItem.childNodes) {
+            if (item.nodeName === "INPUT") {
+                item.addEventListener("click", function () {
+                    copyToClipboard(item.id)
+                });
+            }
+        }
+    }
+}
+
+function copyToClipboard(elementName) {
+    const valueToCopy = document.getElementById(elementName);
+    valueToCopy.select();
+    document.execCommand("copy");
+}
+
 function generateSlug(elementToUpdate) {
-    console.log("Generating slug");
     const newFormTitle = document.getElementById("new-post-title");
     const newFormSlug = document.getElementById("new-post-slug");
     var title = newFormTitle.value;
@@ -503,9 +620,15 @@ function generateSlug(elementToUpdate) {
 }
 
 function saveNewFile(newPostForm) {
-
     let form = document.getElementById(newPostForm);
     let formData = new FormData(form);
+    let playlist = formData.get("playlist");
+    const playlistPrefix = "spotify:playlist:";
+    if (playlist.startsWith(playlistPrefix)) {
+        playlist = playlist.substring(playlistPrefix.length);
+        formData.delete("playlist");
+        formData.append("playlist", playlist);
+    }
     let genres = formData.get("genres[]");
     let updatedGenres = genres.split(",");
     formData.delete("genres[]");
@@ -542,6 +665,7 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
+    popupMessage("Saving...", STATUS.PROCESSING);
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
@@ -551,8 +675,19 @@ function saveAndUpdate() {
     let promise = fetch("/save-and-update", {
         method: "POST",
         body: formJson
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        if (data.status === 200 || data.status === 201) {
+            popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+        } else {
+            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
+        }
+    }).catch((error) => {
+        console.log("SaveAndUpdate error: " + error);
+        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ", please try again later.\n" + error.message, STATUS.ERROR);
     });
-    popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+
 }
 
 /**
@@ -617,6 +752,10 @@ function popupMessage(messageText, status) {
             statusClass = ["mdi-alert-circle-outline", "has-text-warning"];
             break;
         }
+        case STATUS.PROCESSING: {
+            statusClass = ["mdi-spin", "mdi-autorenew", "has-text-info"]
+            break;
+        }
         default:
             break;
     }
@@ -651,7 +790,7 @@ function formToJson(formData) {
             object[key].push(value);
         }
     });
-    console.log(JSON.stringify(object));
+    // console.log(JSON.stringify(object));
     return JSON.stringify(object);
 }
 

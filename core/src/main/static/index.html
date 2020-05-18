@@ -58,22 +58,24 @@
 					</div>
 					<div class="panel-block">
 						<p class="control has-icons-left">
-							<input class="input" type="text" placeholder="Search" name="composer-search" id="composer-search" onchange="filterGallery();" onkeyup="filterGallery();">
+							<input class="input" type="text" placeholder="Search" name="composer-search"
+								   id="composer-search" onchange="filterGallery();" onkeyup="filterGallery();">
 							<span class="icon is-left mdi mdi-account-search-outline"></span>
-      </span>
 						</p>
 					</div>
 					<div class="panel-block">
 						<div id="image-gallery">
-							<p id="image-gallery-loading-msg" class="is-loading"><em>Fetching composer portraits...</em></p>
+							<p id="image-gallery-loading-msg" class="is-loading"><em>Fetching composer portraits...</em>
+							</p>
 						</div>
-					</div>
+						</div>
 				</div>
 			</div>
 
 			<div class="column is-three-quarters" id="rn-right-column">
 				<p class="is-large" id="welcome-message">&lt;-- Choose a file from the list, or click 'New' to start a
 					post</p>
+
 				<div id="editor">
 					<form id="form-md" class="is-hidden">
 
@@ -123,42 +125,56 @@
 								</div>
 							</div>
 
-
 							<div class="field">
 								<label for="form-meta-summary" class="label">Front page summary</label>
 								<input type="text" name="summary" id="form-meta-summary" placeholder="summary"
 									   class="input"/>
 							</div>
+
 							<div class="field">
-								<label for="form-meta-playlist" class="label">Spotify playlist</label>
-								<input type="text" name="playlist" id="form-meta-playlist"
-									   placeholder="6sDTNORdmU5Mg7nO0We6q9" class="input"/>
+								<label class="label" for="form-meta-genres">Genres</label>
+								<input type="text" name="genres[]" id="form-meta-genres"
+									   placeholder="genres"
+									   class="input"/>
 							</div>
 
+							<div class="field">
+								<div class="control">
+									<label class="label" for="form-meta-composers">Composers</label>
+									<input type="text" name="composers[]" id="form-meta-composers"
+										   placeholder="composers"
+										   class="input"/>
+								</div>
+							</div>
 
 							<div class="level">
 								<div class="level-left">
 									<div class="level-item">
 										<div class="field is-horizontal is-grouped">
 											<div class="field-label is-normal">
-												<label class="label" for="form-meta-genres">Genres</label>
+												<label for="form-meta-playlist" class="label">Spotify playlist</label>
 											</div>
 											<div class="control">
-												<input type="text" name="genres[]" id="form-meta-genres"
-													   placeholder="genres"
-													   class="input"/>
+												<input type="text" name="playlist" id="form-meta-playlist"
+													   placeholder="6sDTNORdmU5Mg7nO0We6q9" class="input"/>
 											</div>
 										</div>
 									</div>
 									<div class="level-item">
-										<div class="field-label is-normal">
-											<label class="label" for="form-meta-composers">Composers</label>
+
+										<div id="tracks-list-dropdown" class="dropdown" onclick="toggleTrackList()">
+											<div class="dropdown-trigger">
+												<button class="button" aria-haspopup="true" aria-controls="dropdown-menu" type="button">
+													<span class="icon is-small mdi mdi-music-box-multiple-outline"></span>
+													<span>Tracks</span>
+												</button>
+											</div>
+											<div class="dropdown-menu" id="track-list-dropdown-menu" role="menu">
+												<div id="track-listing-container" class="dropdown-content">
+												</div>
+											</div>
 										</div>
-										<div class="control">
-											<input type="text" name="composers[]" id="form-meta-composers"
-												   placeholder="composers"
-												   class="input"/>
-										</div>
+
 									</div>
 								</div>
 								<div class="level-right">
@@ -169,6 +185,7 @@
 									</div>
 								</div>
 							</div>
+
 						</fieldset>
 						<fieldset class="markdown-text">
 							<div class="field">
@@ -190,96 +207,116 @@
 
 <!-- modals go here -->
 <!-- new post wizard -->
-<div id="new-post-modal" class="modal">
-	<div class="modal-background"></div>
-	<div class="modal-card">
-		<header class="modal-card-head">
-			<p class="modal-card-title">New Post</p>
-			<button class="delete" aria-label="close" onclick="closeModal('new-post-modal');"></button>
-		</header>
-		<section class="modal-card-body">
-			<form id="new-post-form" name="new-post-form">
-				<input type="hidden" name="path" value="."/>
-				<fieldset id="new-post-basics" class="">
-					<div class="field">
-						<label for="new-post-title">Title</label>
-						<div class="control">
-							<input type="text" name="title" id="new-post-title"
-								   onkeyup="generateSlug('new-post-slug-url-view');"
-								   placeholder="title" data-validator="validate_newPostForm_title()">
-							<p class="help is-hidden">hidden help</p>
-						</div>
-					</div>
-					<p class="is-small">Website URL will be:<br/> https://www.therightnotes.org/<strong><span
-							id="new-post-slug-url-view"></span></strong>.html
-					</p>
-					<input type="hidden" name="slug" id="new-post-slug" placeholder="url">
-				</fieldset>
+<div class="container">
+	<div class="columns">
+		<div class="column">
+			<div id="new-post-modal" class="modal">
+				<div class="modal-background"></div>
+				<div class="modal-card">
+					<header class="modal-card-head">
+						<p class="modal-card-title">New Post</p>
+						<button class="delete" aria-label="close" onclick="closeModal('new-post-modal');"></button>
+					</header>
+					<section class="modal-card-body">
 
-				<fieldset id="new-post-summary-and-spotify" class="is-hidden">
-					<div class="field">
-						<label for="new-post-summary">Summary</label>
-						<div class="control">
-							<input type="text" name="summary" id="new-post-summary"
-								   placeholder="Summary (max 300 chars?)" width="160">
-						</div>
-					</div>
-					<div class="field">
-						<label for="new-post-spotify">Spotify Playlist ID</label>
-						<div class="control">
-							<input type="text" name="playlist" id="new-post-spotify"
-								   placeholder="7cfKH6ExfL01NtV4j7VrKy">
-							<p class="help">Paste the <em>Spotify URI</em> for the playlist here - from Spotify, open
-								the playlist, click on the <em>"..." more</em> circle, then choose Share > Copy Playlist
-								URI.</p>
-						</div>
-					</div>
-				</fieldset>
+						<form id="new-post-form" name="new-post-form">
+							<input type="hidden" name="path" value="."/>
+							<fieldset id="new-post-basics" class="meta-data">
 
-				<fieldset id="new-post-tags" class="is-hidden">
-					<div class="field">
-						<label for="new-post-genres">Genres</label>
-						<div class="control">
-							<input type="text" name="genres[]" id="new-post-genres" placeholder="genres">
-							<p class="help is-hidden">hidden help</p>
-							<p class="hint">A comma-separated list of genres, e.g "rock, pop, new age"</p>
-						</div>
-					</div>
-					<div class="field">
-						<label for="new-post-composers">Composers</label>
-						<div class="control">
-							<input type="text" name="composers[]" id="new-post-composers" placeholder="composers">
-							<p class="help is-hidden">hidden help</p>
-							<p class="hint">A comma-separated list of composers, e.g "Bach, Carl Nielsen, Maurice
-								Ravel"</p>
-						</div>
-					</div>
-				</fieldset>
-				<fieldset id="new-post-bodytext" class="is-hidden">
-					<div class="field">
-						<label for="new-post-text">Text</label>
-						<div class="control">
+								<div class="field">
+									<label class="label" for="form-meta-title">Title</label>
+									<div class="control">
+										<input type="text" name="title" id="new-post-title"
+											   class="input"
+											   onkeyup="generateSlug('new-post-slug-url-view');"
+											   placeholder="title" data-validator="validate_newPostForm_title()">
+										<p class="help is-hidden">hidden help</p>
+									</div>
+								</div>
+								<p class="is-small">Website URL will be:<br/>
+									https://www.therightnotes.org/<strong><span
+											id="new-post-slug-url-view"></span></strong>.html
+								</p>
+								<input type="hidden" name="slug" id="new-post-slug" placeholder="url">
+							</fieldset>
+
+							<fieldset id="new-post-summary-and-spotify" class="is-hidden">
+								<div class="field">
+									<label for="new-post-summary">Summary</label>
+									<div class="control">
+										<input type="text" name="summary" id="new-post-summary" class="input"
+											   placeholder="Summary (max 300 chars?)" width="160">
+									</div>
+								</div>
+								<div class="field">
+									<label for="new-post-spotify">Spotify Playlist ID</label>
+									<div class="control">
+										<input type="text" name="playlist" id="new-post-spotify" class="input"
+											   placeholder="7cfKH6ExfL01NtV4j7VrKy">
+										<p class="help">Paste the <em>Spotify URI</em> for the playlist here - from
+											Spotify, open
+											the playlist, click on the <em>"..." more</em> circle, then choose Share >
+											Copy Playlist
+											URI.</p>
+									</div>
+								</div>
+							</fieldset>
+
+							<fieldset id="new-post-tags" class="is-hidden">
+								<div class="field">
+									<label for="new-post-genres">Genres</label>
+									<div class="control">
+										<input type="text" name="genres[]" id="new-post-genres" class="input"
+											   placeholder="genres">
+										<p class="help is-hidden">hidden help</p>
+										<p class="hint">A comma-separated list of genres, e.g "rock, pop, new age"</p>
+									</div>
+								</div>
+								<div class="field">
+									<label for="new-post-composers">Composers</label>
+									<div class="control">
+										<input type="text" name="composers[]" id="new-post-composers" class="input"
+											   placeholder="composers">
+										<p class="help is-hidden">hidden help</p>
+										<p class="hint">A comma-separated list of composers, e.g "Bach, Carl Nielsen,
+											Maurice
+											Ravel"</p>
+									</div>
+								</div>
+							</fieldset>
+							<fieldset id="new-post-bodytext" class="is-hidden">
+								<div class="field">
+									<label for="new-post-text">Text</label>
+									<div class="control">
 							<textarea name="body" id="new-post-text" placeholder="Paste the text of the post here."
-									  cols="60" rows="3"></textarea>
-							<p class="help">Just paste the text in. Pressing 'Save' will create a new draft file, ready
-								for editing. It will not be published to the website yet.</p>
-						</div>
-					</div>
-				</fieldset>
-			</form>
-		</section>
-		<footer class="modal-card-foot">
-			<button class="button is-danger" onclick="closeModal('new-post-modal');">Cancel</button>
-			<button class="button" onclick="newFileWizardPrev()" id="new-post-btn-prev"><span
-					class="mdi mdi-page-previous">Previous</span></button>
-			<button class="button" onclick="newFileWizardNext()" id="new-post-btn-next"><span class="mdi mdi-page-next">Next</span>
-			</button>
-			<button class="button is-success is-hidden" onclick="saveNewFile('new-post-form')" id="new-post-btn-save">
-				<span class="mdi mdi-check">Save</span></button>
-		</footer>
+									  class="input"
+									  cols="80" rows="3"></textarea>
+										<p class="help">Just paste the text in. Pressing 'Save' will create a new draft
+											file, ready
+											for editing. It will not be published to the website yet.</p>
+									</div>
+								</div>
+							</fieldset>
+						</form>
+
+					</section>
+					<footer class="modal-card-foot">
+						<button class="button is-danger" onclick="closeModal('new-post-modal');">Cancel</button>
+						<button class="button" onclick="newFileWizardPrev()" id="new-post-btn-prev"><span
+								class="mdi mdi-page-previous">Previous</span></button>
+						<button class="button" onclick="newFileWizardNext()" id="new-post-btn-next"><span
+								class="mdi mdi-page-next">Next</span>
+						</button>
+						<button class="button is-success is-hidden" onclick="saveNewFile('new-post-form')"
+								id="new-post-btn-save">
+							<span class="mdi mdi-check">Save</span></button>
+					</footer>
+				</div>
+			</div>
+
+		</div>
 	</div>
 </div>
-
 <!-- image upload modal -->
 <div id="image-upload-modal" class="modal">
 	<div class="modal-background"></div>
@@ -294,15 +331,9 @@
 					<p>Upload a single file by dragging and dropping an image onto this dashed
 						region.</p>
 					<div id="image-upload-spinner has-text-centered">
-						<progress id="image-upload-spinner-span" class="progress is-info is-hidden" max="100">60%</progress>
+						<progress id="image-upload-spinner-span" class="progress is-info is-hidden" max="100">60%
+						</progress>
 					</div>
-					<!--					<div class="field">
-											<label for="image-files" class="button">Select a file</label>
-						<div class="control">
-							<input type="file" id="image-files" name="image-uploads" accept="image/*"
-								   onchange="handleFiles(this.files)"/>
-						</div>
-					</div>-->
 				</div>
 			</form>
 			<div id="upload-preview" class="preview-gallery">
@@ -310,7 +341,9 @@
 			</div>
 		</section>
 		<footer class="modal-card-foot">
-			<button class="button is-danger" id="btn-cancel-image-upload"  onclick="closeModal('image-upload-modal');">Cancel</button>
+			<button class="button is-danger" id="btn-cancel-image-upload" onclick="closeModal('image-upload-modal');">
+				Cancel
+			</button>
 		</footer>
 	</div>
 </div>
