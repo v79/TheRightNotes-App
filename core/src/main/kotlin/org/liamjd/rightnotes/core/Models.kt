@@ -58,3 +58,13 @@ data class Gallery(val imageList: List<GalleryImage>)
 
 @Serializable
 data class GalleryImage(val filename: String, val url: String, val size: Long)
+
+data class SpotifyAccessToken(val access_token: String, val expires_in: Int)
+
+@Serializable
+data class AppResponse(var status: Int, var message: String? = "") {
+	val timestamp: Long
+	init {
+		timestamp = System.currentTimeMillis();
+	}
+}
