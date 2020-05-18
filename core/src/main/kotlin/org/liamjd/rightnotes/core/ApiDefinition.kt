@@ -31,6 +31,13 @@ val api = api<RightNotesComponents> {
 		indexFile = "index.html"
 	}
 
+	filter { req, handler ->
+		val authHeader = req.headers[HttpHeaders.AUTHORIZATION]
+		println("authHeader:" + authHeader)
+
+	}
+
+
 	get("/post-list") { req ->
 		val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
 		val postList = createHTMLDocument().ul {

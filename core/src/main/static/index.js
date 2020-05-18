@@ -545,6 +545,7 @@ function getPlaylistTracks() {
     const trackListingDiv = document.getElementById("track-listing-container");
     const playlistId = document.getElementById("form-meta-playlist").value;
 
+    console.log("Fetching playlist tracks for " + playlistId + " with auth token: "+  spotifyToken);
     let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
     let promise = fetch(fetchUrl, {
         method: "GET",
