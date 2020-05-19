@@ -7,6 +7,7 @@ import kotlinx.io.ByteArrayOutputStream
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import org.apache.http.HttpStatus
+import ws.osiris.aws.CognitoUserPoolsAuth
 import ws.osiris.core.*
 import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
@@ -32,154 +33,167 @@ val api = api<RightNotesComponents> {
 	}
 
 	filter { req, handler ->
-		val authHeader = req.headers[HttpHeaders.AUTHORIZATION]
-		println("authHeader:" + authHeader)
-
+		// do anything required around auth (get username, etc)
+		// finally, pass it on to the appropriate handler to take action
+		handler(req)
 	}
 
-
-	get("/post-list") { req ->
-		val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
-		val postList = createHTMLDocument().ul {
-			repoFiles.forEach { sourceFile ->
-				val kb = if (sourceFile.fileSize != null) sourceFile.fileSize / 1024 else 0L
-				li("file") {
-					span(classes = "post-list-item") {
-						onClick = "loadMarkdownFile('${sourceFile.source}')"
-						title = "$kb kb"
-						+sourceFile.name.removePrefix(DRAFT).replace("'", "\\'").removeSuffix(".md")
-						if (sourceFile.draft) {
-							span(classes = "tag is-light draft") {
-								+"DRAFT"
+	auth(CognitoUserPoolsAuth) {
+		get("/post-list") { req ->
+			val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
+			val postList = createHTMLDocument().ul {
+				repoFiles.forEach { sourceFile ->
+					val kb = if (sourceFile.fileSize != null) sourceFile.fileSize / 1024 else 0L
+					li("file") {
+						span(classes = "post-list-item") {
+							onClick = "loadMarkdownFile('${sourceFile.source}')"
+							title = "$kb kb"
+							+sourceFile.name.removePrefix(DRAFT).replace("'", "\\'").removeSuffix(".md")
+							if (sourceFile.draft) {
+								span(classes = "tag is-light draft") {
+									+"DRAFT"
+								}
 							}
 						}
 					}
 				}
 			}
-		}
-		req.returnHtml(postList.serialize(true))
-	}
-
-	post("/load-markdown") { req ->
-		val fileToLoad = req.body<String>()
-		println("Loading markdown file $fileToLoad")
-		val markdown = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
-		if (markdown.path.isNotEmpty()) {
-			val json = Json(JsonConfiguration.Stable)
-			val jsonData = json.stringify(BasculePost.serializer(), markdown)
-
-			jsonData
-		} else {
-			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
-		}
-
-	}
-
-	post("/save-new-file") { req ->
-		val postContents = req.body<String>()
-		val json = Json(JsonConfiguration.Stable)
-		val yamlPost = json.parse(FromJson.serializer(), postContents)
-		println(yamlPost)
-		// need to sanitise the file name?
-		// prepending "__" makes it a draft file
-		val fileName = DRAFT + yamlPost.title.replace(Regex("\\W"), " ").trim() + ".md"
-		val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
-		val status = if (result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
-		req.responseBuilder().status(status).build(fileName)
-	}
-
-	post("/save-and-update") { req ->
-		val postContents = req.body<String>()
-		val json = Json(JsonConfiguration.Stable)
-		val yamlPost = json.parse(FromJson.serializer(), postContents)
-		println("Updating ${yamlPost.path} in Github")
-
-		val appResponse = gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
-		req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(),appResponse))
-	}
-
-	get("/image-list") { req ->
-		val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
-		val galleryList = mutableListOf<GalleryImage>()
-		imageList.forEach { sourceFile ->
-			galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}", sourceFile.size))
-		}
-
-		if (imageList.isNotEmpty()) {
-			val gallery = Gallery(galleryList)
-			val json = Json(JsonConfiguration.Stable)
-			val jsonData = json.stringify(Gallery.serializer(), gallery)
-			jsonData
-		} else {
-			req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+			req.returnHtml(postList.serialize(true))
 		}
 	}
 
-	post("/release-from-draft") { req ->
-		val pathToRelease = req.body<String>();
-		println("Attempting to release $pathToRelease from draft status")
-		""
-	}
+	auth(CognitoUserPoolsAuth) {
+		post("/load-markdown") { req ->
+			val fileToLoad = req.body<String>()
+			println("Loading markdown file $fileToLoad")
+			val markdown = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
+			if (markdown.path.isNotEmpty()) {
+				val json = Json(JsonConfiguration.Stable)
+				val jsonData = json.stringify(BasculePost.serializer(), markdown)
 
-	post("/upload-image") { req ->
-		val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
-		val contentDispositionHeader = req.headers["Content-Disposition"]
-		val filename = contentDispositionHeader.removePrefix("attachment; filename=\"").removeSuffix("\"")
-		val (mimeType, _) = ContentType.parse(contentTypeHeader)
-		if (!imageMimeTypes.contains(mimeType)) {
-			println("Content-Type must be one of $imageMimeTypes")
-			req.responseBuilder().status(HttpStatus.SC_BAD_REQUEST).header("Content-Type", "text/plain").build("Image must be a JPG, PNG or JFIF file.")
-
-		} else {
-			val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
-			println("Upload image called with ${filename}, ${mimeType}, ${req.requireBinaryBody().size} bytes")
-			val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
-			val outputStream = ByteArrayOutputStream()
-			ImageIO.write(image, formatName, outputStream)
-			val byteArray = outputStream.toByteArray()
-
-			// store the original in git images folder first
-			gitService.createBinaryFile("v79", "rightnotes", "images/composers/${filename}", "master", byteArray, false)
-			val scaledImage = imageService.scaleAndConvertImage(byteArray)
-
-			println("Scaled image created as a PNG: " + scaledImage.size)
-
-			val nameWithoutExtension = filename.cleanUp()
-
-			// store the processed file in github
-			gitService.createBinaryFile("v79", "rightnotes", "assets/images/scaled/${nameWithoutExtension}.png", "master", scaledImage, false)
-
-			// TODO: deal with this error message:
-			// org.kohsuke.github.HttpException: {"message":"Reference cannot be updated","documentation_url":"https://developer.github.com/v3/git/refs/#update-a-reference"}
-
-			// transfer the processed file to S3 bucket
-			val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png", scaledImage)
-
-			if (writtenToBucket) {
-				req.responseBuilder()
-						.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
-						.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
-						.build(scaledImage)
+				jsonData
 			} else {
-				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+				req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+			}
+
+		}
+	}
+	auth(CognitoUserPoolsAuth) {
+		post("/save-new-file") { req ->
+			val postContents = req.body<String>()
+			val json = Json(JsonConfiguration.Stable)
+			val yamlPost = json.parse(FromJson.serializer(), postContents)
+			println(yamlPost)
+			// need to sanitise the file name?
+			// prepending "__" makes it a draft file
+			val fileName = DRAFT + yamlPost.title.replace(Regex("\\W"), " ").trim() + ".md"
+			val result = gitService.createNewFile("v79", "rightnotes", "sources/${fileName}", "master", yamlPost, false)
+			val status = if (result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
+			req.responseBuilder().status(status).build(fileName)
+		}
+	}
+
+	auth(CognitoUserPoolsAuth) {
+		post("/save-and-update") { req ->
+			val postContents = req.body<String>()
+			val json = Json(JsonConfiguration.Stable)
+			val yamlPost = json.parse(FromJson.serializer(), postContents)
+			println("Updating ${yamlPost.path} in Github")
+
+			val appResponse = gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
+			req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(),appResponse))
+		}
+	}
+	auth(CognitoUserPoolsAuth) {
+		get("/image-list") { req ->
+			val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
+			val galleryList = mutableListOf<GalleryImage>()
+			imageList.forEach { sourceFile ->
+				galleryList.add(GalleryImage(sourceFile.name, "https://www.therightnotes.org/assets/images/scaled/${sourceFile.name}", sourceFile.size))
+			}
+
+			if (imageList.isNotEmpty()) {
+				val gallery = Gallery(galleryList)
+				val json = Json(JsonConfiguration.Stable)
+				val jsonData = json.stringify(Gallery.serializer(), gallery)
+				jsonData
+			} else {
+				req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
 			}
 		}
 	}
 
-	get("/spotify-token") { req ->
-		val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
-		val x = spotifyClient + ":" + SPOTIFY_SECRET
-		println("Getting spotify token for " + x)
+	auth(CognitoUserPoolsAuth) {
+		post("/release-from-draft") { req ->
+			val pathToRelease = req.body<String>();
+			println("Attempting to release $pathToRelease from draft status")
+			""
+		}
+	}
 
-		val spotifyAuth = Base64.getEncoder().encode(x.toByteArray()).toString(Charset.defaultCharset())
-		println(spotifyAuth)
+	auth(CognitoUserPoolsAuth) {
+		post("/upload-image") { req ->
+			val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
+			val contentDispositionHeader = req.headers["Content-Disposition"]
+			val filename = contentDispositionHeader.removePrefix("attachment; filename=\"").removeSuffix("\"")
+			val (mimeType, _) = ContentType.parse(contentTypeHeader)
+			if (!imageMimeTypes.contains(mimeType)) {
+				println("Content-Type must be one of $imageMimeTypes")
+				req.responseBuilder().status(HttpStatus.SC_BAD_REQUEST).header("Content-Type", "text/plain").build("Image must be a JPG, PNG or JFIF file.")
 
-		val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"), ("Content-Type" to "application/x-www-form-urlencoded"), ("Accept-Encoding" to "gzip")), data = "grant_type=client_credentials")
+			} else {
+				val image = ImageIO.read(ByteArrayInputStream(req.requireBinaryBody()))
+				println("Upload image called with ${filename}, ${mimeType}, ${req.requireBinaryBody().size} bytes")
+				val formatName = mimeType.substring(mimeType.indexOf('/') + 1)
+				val outputStream = ByteArrayOutputStream()
+				ImageIO.write(image, formatName, outputStream)
+				val byteArray = outputStream.toByteArray()
 
-		if(spotifyResponse.statusCode == HttpStatus.SC_OK) {
-			req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(spotifyResponse.jsonObject.get("access_token"))
-		} else {
-			req.responseBuilder().status(HttpStatus.SC_UNAUTHORIZED)
+				// store the original in git images folder first
+				gitService.createBinaryFile("v79", "rightnotes", "images/composers/${filename}", "master", byteArray, false)
+				val scaledImage = imageService.scaleAndConvertImage(byteArray)
+
+				println("Scaled image created as a PNG: " + scaledImage.size)
+
+				val nameWithoutExtension = filename.cleanUp()
+
+				// store the processed file in github
+				gitService.createBinaryFile("v79", "rightnotes", "assets/images/scaled/${nameWithoutExtension}.png", "master", scaledImage, false)
+
+				// TODO: deal with this error message:
+				// org.kohsuke.github.HttpException: {"message":"Reference cannot be updated","documentation_url":"https://developer.github.com/v3/git/refs/#update-a-reference"}
+
+				// transfer the processed file to S3 bucket
+				val writtenToBucket = s3Service.writeToBucket("assets/images/scaled/${nameWithoutExtension}.png", scaledImage)
+
+				if (writtenToBucket) {
+					req.responseBuilder()
+							.header(HttpHeaders.CONTENT_TYPE, contentTypeHeader)
+							.header(HttpHeaders.CONTENT_LENGTH, scaledImage.size.toString())
+							.build(scaledImage)
+				} else {
+					req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+				}
+			}
+		}
+	}
+
+	auth(CognitoUserPoolsAuth) {
+		get("/spotify-token") { req ->
+			val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
+			val x = spotifyClient + ":" + SPOTIFY_SECRET
+			println("Getting spotify token for " + x)
+
+			val spotifyAuth = Base64.getEncoder().encode(x.toByteArray()).toString(Charset.defaultCharset())
+			println(spotifyAuth)
+
+			val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"), ("Content-Type" to "application/x-www-form-urlencoded"), ("Accept-Encoding" to "gzip")), data = "grant_type=client_credentials")
+
+			if (spotifyResponse.statusCode == HttpStatus.SC_OK) {
+				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(spotifyResponse.jsonObject.get("access_token"))
+			} else {
+				req.responseBuilder().status(HttpStatus.SC_UNAUTHORIZED)
+			}
 		}
 	}
 

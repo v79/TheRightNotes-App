@@ -7,7 +7,7 @@ let gallery;
 let initialGalleryElement;
 let tracklist;
 let spotifyToken;
-
+let authToken;
 /**
  * On document load activities to populate file list and image gallery.
  * Fetches spotify auth token
@@ -16,15 +16,57 @@ document.addEventListener("DOMContentLoaded", () => {
     function loadFileList() {
         const fileListDom = document.querySelector("#file-list");
 
-        let promise = fetch("/post-list")
+        let promise = fetch("/post-list", {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + authToken
+            }
+        })
             .then((response) => response.text())
             .then(data => updateElement(fileListDom, data));
     }
 
+    authenticate();
     loadFileList();
     loadImageGallery();
     spotifyToken = getSpotifyToken();
 });
+
+// set up authentication
+function authenticate() {
+    let awsAccountId = '086949310404';
+    let awsRegion = 'eu-west-2';
+    let cognitoClientId = 'urfqo0jeeh54d5mi1rf70cfmk';
+    let apiId = 'ru93q91hc7';
+
+    let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
+        `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
+        `response_type=token&scope=email+openid+phone+profile`;
+
+    authToken = parseIdToken();
+    console.log(`idToken (authToken): ${authToken}`);
+
+    if (authToken) {
+        // document.getElementById('msg').innerText = 'Logged in';
+        // document.getElementById('requestButton').disabled = false;
+        return;
+    }
+    // not logged in - redirect to login page
+    console.log(`not logged in, redirecting to ${loginUrl}`);
+    window.location = loginUrl;
+}
+
+function parseIdToken() {
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let regex = /id_token=([^&]*)/;
+        let match = hash.match(regex);
+        if (match) {
+            return match[1];
+        }
+    }
+    return null;
+}
 
 /**
  * Image gallery
@@ -35,7 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
  * @returns JSON object containing list of composers
  */
 function loadImageGallery() {
-    let promise = fetch("/image-list")
+    let promise = fetch("/image-list", {
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
         .then((response) => {
             return response.json()
         })
@@ -372,7 +418,9 @@ const dropArea = document.getElementById("image-upload-drop-area");
  */
 function loadMarkdownFile(fileName) {
     tracklist = null;
-    let promise = fetch("/load-markdown", {method: "POST", body: fileName})
+    let promise = fetch("/load-markdown", {method: "POST", body: fileName,  headers: {
+            'Authorization': 'Bearer ' + authToken
+        }})
         .then((response) => response.text())
         .then((data) => (markdownFile = updateMarkdownEditor(data, false)));
 }
@@ -470,6 +518,7 @@ function uploadFile(file) {
     fetch("/upload-image", {
         headers: {
             'Content-Type': 'image/jpeg',
+            'Authorization': 'Bearer ' + authToken,
             'Content-Disposition': 'attachment; filename="' + file.name + '"'
         },
         method: "POST",
@@ -526,6 +575,7 @@ function getSpotifyToken() {
         method: "GET",
         headers: {
             'Accept': 'text/plain',
+            'Authorization': 'Bearer ' + authToken
         }
     }).then((response) => {
         return response.text();
@@ -645,6 +695,9 @@ function saveNewFile(newPostForm) {
     let json = formToJson(formData);
     let promise = fetch("/save-new-file", {
         method: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        },
         body: json
     }).then(response => {
         if (response.ok) {
@@ -661,7 +714,10 @@ function releaseDraft() {
     console.log("Attempting to release draft file " + markdownFile.filename + " which is draft: " + markdownFile.isDraft);
     let promise = fetch("/release-from-draft", {
         method: "POST",
-        body: markdownFile.filename
+        body: markdownFile.filename,
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
     }).finally((data) => window.location.replace("/"));
 }
 
@@ -675,6 +731,9 @@ function saveAndUpdate() {
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        },
         body: formJson
     }).then((response) => {
         return response.json();
