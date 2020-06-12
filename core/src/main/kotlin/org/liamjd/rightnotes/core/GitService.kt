@@ -62,14 +62,24 @@ class GitService : ComponentsProvider {
 			val post = Yaml(configuration = notStrict).parse(FromGithub.serializer(), yaml)
 			post.body = bodyText
 
-			return BasculePost(path, post.title, bodyText, post.slug, post.playlist
-					?: "", post.summary
-					?: "", post.composers, post.genres)
+			return BasculePost(
+					path = path,
+					title = post.title,
+					layout = post.layout,
+					body = bodyText,
+					slug = post.slug,
+					playlist = post.playlist
+							?: "",
+					summary = post.summary
+							?: "",
+					composers = post.composers,
+					genres = post.genres
+			)
 		} catch (ioe: IOException) {
 			println(ioe)
 		}
-		return BasculePost("", "",
-				"", "", "", "", emptyList(), emptyList())
+		return BasculePost(path = "", title =  "",
+				layout = "", body = "", slug = "", playlist = "", summary = "", composers = emptyList(), genres = emptyList())
 	}
 
 	/**

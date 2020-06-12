@@ -70,7 +70,6 @@ val api = api<RightNotesComponents> {
 			if (markdown.path.isNotEmpty()) {
 				val json = Json(JsonConfiguration.Stable)
 				val jsonData = json.stringify(BasculePost.serializer(), markdown)
-
 				jsonData
 			} else {
 				req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()

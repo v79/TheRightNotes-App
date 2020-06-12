@@ -122,6 +122,19 @@
 											</div>
 										</div>
 									</div>
+									<div class="level-item">
+										<div class="field is-horizontal is-grouped">
+											<div class="field-label is-normal">
+												<label class="label" for="form-meta-layout">Layout</label>
+											</div>
+											<div class="control">
+												<input type="text" name="slug" id="form-meta-layout"
+													   placeholder="layout"
+													   title="Different page types may have different layouts"
+													   class="input" disabled/>
+											</div>
+										</div>
+									</div>
 								</div>
 							</div>
 
@@ -207,7 +220,7 @@
 
 <!-- modals go here -->
 <!-- new post wizard -->
-<div class="container">
+<div class="container" id="rn-new-post-wizard">
 	<div class="columns">
 		<div class="column">
 			<div id="new-post-modal" class="modal">
@@ -231,6 +244,15 @@
 											   onkeyup="generateSlug('new-post-slug-url-view');"
 											   placeholder="title" data-validator="validate_newPostForm_title()">
 										<p class="help is-hidden">hidden help</p>
+									</div>
+									<label class="label" for="new-post-layout">Theme or Composer?</label>
+									<div class="control">
+										<select class="select" name="layout" id="new-post-layout">
+											<options>
+												<option value="composer" selected>Composer</option>
+												<option value="theme">Theme</option>
+											</options>
+										</select>
 									</div>
 								</div>
 								<p class="is-small">Website URL will be:<br/>

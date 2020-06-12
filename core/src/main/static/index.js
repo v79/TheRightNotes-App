@@ -430,23 +430,24 @@ function updateMarkdownEditor(data, disabled) {
     const formElements = form.elements;
     const md_textarea = document.getElementById("form-md-text");
     const releaseDraftButton = document.getElementById("btn-release-draft");
-    var o = JSON.parse(data);
+    let mdObject = JSON.parse(data);
 
-    formElements["form-meta-filepath"].value = o.path;
-    formElements["form-meta-title"].value = o.title;
-    formElements["form-meta-slug"].value = o.slug;
-    formElements["form-meta-summary"].value = o.summary;
-    formElements["form-meta-playlist"].value = o.playlist;
-    formElements["form-meta-composers"].value = o.composers;
-    formElements["form-meta-genres"].value = o.genres;
+    formElements["form-meta-filepath"].value = mdObject.path;
+    formElements["form-meta-title"].value = mdObject.title;
+    formElements["form-meta-slug"].value = mdObject.slug;
+    formElements["form-meta-summary"].value = mdObject.summary;
+    formElements["form-meta-playlist"].value = mdObject.playlist;
+    formElements["form-meta-composers"].value = mdObject.composers;
+    formElements["form-meta-genres"].value = mdObject.genres;
+    formElements["form-meta-layout"].value = mdObject.layout;
 
     // md_textarea.textContent = o.body;
-    simplemde.value(o.body)
+    simplemde.value(mdObject.body)
     md_textarea.disabled = false;
     hide("welcome-message");
     unhide(form.id);
-    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("__");
-    let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
+    let isDraft = mdObject.path.substring(mdObject.path.lastIndexOf("/") + 1).startsWith("__");
+    let loadedFile = new MarkdownFile(mdObject.path, mdObject.title, isDraft);
     if (!isDraft) {
         hide("btn-release-draft");
     } else {
