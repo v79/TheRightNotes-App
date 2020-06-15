@@ -729,6 +729,7 @@ function saveAndUpdate() {
     let formData = new FormData(form);
     formData.append("body", mdeContent);
     formData.append("slug", document.getElementById("form-meta-slug").value);
+    formData.append("layout",document.getElementById("form-meta-layout").value);
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",
