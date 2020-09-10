@@ -693,7 +693,15 @@ function saveNewFile(newPostForm) {
     for (let comp of updatedComposers) {
         formData.append("composers[]", comp)
     }
+    // need to escape the summary, may contain YAML characters such as the colon, and wrap it in quotes
+    let summary = formData.get("summary");
+    let updatedSummary = '"' + summary + '"';
+    formData.delete("summary");
+    formData.append("summary",updatedSummary);
+
     let json = formToJson(formData);
+    console.log("Posting form data...");
+    console.log(json);
     let promise = fetch("/save-new-file", {
         method: "POST",
         headers: {
@@ -730,6 +738,11 @@ function saveAndUpdate() {
     formData.append("body", mdeContent);
     formData.append("slug", document.getElementById("form-meta-slug").value);
     formData.append("layout",document.getElementById("form-meta-layout").value);
+    // wrap the summary in quotes
+    let summary = formData.get("summary");
+    let updatedSummary = '"' + summary + '"';
+    formData.delete("summary");
+    formData.append("summary",updatedSummary);
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",

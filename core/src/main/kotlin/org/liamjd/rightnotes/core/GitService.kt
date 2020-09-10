@@ -2,7 +2,6 @@ package org.liamjd.rightnotes.core
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import org.apache.http.HttpStatus
 import org.kohsuke.github.*
 import ws.osiris.core.ComponentsProvider
 import java.io.IOException
@@ -76,8 +75,10 @@ class GitService : ComponentsProvider {
 					genres = post.genres
 			)
 		} catch (ioe: IOException) {
+			// TODO : Return error messages to the user if not possible
 			println(ioe)
 		}
+		// TODO : Return something more meaningful if there is no valid post?
 		return BasculePost(path = "", title =  "",
 				layout = "", body = "", slug = "", playlist = "", summary = "", composers = emptyList(), genres = emptyList())
 	}
