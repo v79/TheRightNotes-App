@@ -66,19 +66,19 @@ val api = api<RightNotesComponents> {
 		post("/load-markdown") { req ->
 			val fileToLoad = req.body<String>()
 			println("Loading markdown file $fileToLoad")
-			val markdown: GitResponse = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
-			when(markdown) {
+			val response: GitResponse = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
+			when(response) {
 				is BasculePost -> {
 					if (markdown.path.isNotEmpty()) {
 						val json = Json(JsonConfiguration.Stable)
-						val jsonData = json.stringify(BasculePost.serializer(), markdown)
+						val jsonData = json.stringify(BasculePost.serializer(), response)
 						jsonData
 					} else {
 						req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
 					}
 				}
 				is ServiceError -> {
-					""
+					req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR).buld(response.errorText)
 				}
 			}
 		}
