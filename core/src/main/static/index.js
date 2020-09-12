@@ -416,16 +416,49 @@ const dropArea = document.getElementById("image-upload-drop-area");
 /**
  * button actions
  */
+
+/**
+ * Generic error handler; if response is not OK then throw Error to be caught in the Promise
+ * @param response
+ * @returns {{ok}|*}
+ */
+function handleErrors(response) {
+    console.dir(response);
+    if (!response.ok) {
+        throw Error(response);
+    }
+    return response;
+}
+
+/**
+ * Load the markdown source file into the markdown editor
+ * @param fileName
+ */
 function loadMarkdownFile(fileName) {
 
-    popupMessage("Loading file '" + fileName + "'",STATUS.PROCESSING)
+    popupMessage("Loading file '" + fileName + "'", "", STATUS.PROCESSING)
     tracklist = null;
-    let promise = fetch("/load-markdown", {method: "POST", body: fileName,  headers: {
+
+    fetch("/load-markdown", {
+        method: "POST", body: fileName, headers: {
             'Authorization': 'Bearer ' + authToken
-        }})
+        }
+    }).then(response => {
+        if (!response.ok) {
+            throw response
+        } // will be caught as 'error' below
+        return response;
+
+    })
         .then((response) => response.text())
         .then((data) => (markdownFile = updateMarkdownEditor(data, false)))
-        .then(closeAllModals);
+        .catch(error => {
+            if (error.json) {
+                error.json().then(e => {
+                    popupMessage(e["summary"], e["detail"], STATUS.ERROR);
+                })
+            }
+        })
 }
 
 function updateMarkdownEditor(data, disabled) {
@@ -433,8 +466,13 @@ function updateMarkdownEditor(data, disabled) {
     const formElements = form.elements;
     const md_textarea = document.getElementById("form-md-text");
     const releaseDraftButton = document.getElementById("btn-release-draft");
-    let mdObject = JSON.parse(data);
-
+    let mdObject;
+    try {
+        mdObject = JSON.parse(data);
+    } catch {
+        console.error("Failed to parse markdown data: " + data);
+        return;
+    }
     formElements["form-meta-filepath"].value = mdObject.path;
     formElements["form-meta-title"].value = mdObject.title;
     formElements["form-meta-slug"].value = mdObject.slug;
@@ -459,6 +497,8 @@ function updateMarkdownEditor(data, disabled) {
 
     // get the track listing
     getPlaylistTracks();
+    // and close modal
+    closeAllModals();
     return loadedFile;
 }
 
@@ -530,9 +570,9 @@ function uploadFile(file) {
     })
         .then((response) => {
             if (response.ok) {
-                popupMessage(`Upload of image ${file.name} completed.\nIt has been resized and converted and will appear in\nthe Composer Portraits box`, STATUS.OK);
+                popupMessage(`Upload of image ${file.name} completed.","It has been resized and converted and will appear in\nthe Composer Portraits box`, STATUS.OK);
             } else {
-                popupMessage(`Upload of image ${file.name} failed.\nPlease try again with a different file.`, STATUS.ERROR);
+                popupMessage(`Upload of image ${file.name} failed.","Please try again with a different file.`, STATUS.ERROR);
             }
         })
         .catch(() => {
@@ -599,7 +639,7 @@ function getPlaylistTracks() {
     const trackListingDiv = document.getElementById("track-listing-container");
     const playlistId = document.getElementById("form-meta-playlist").value;
 
-    console.log("Fetching playlist tracks for " + playlistId + " with auth token: "+  spotifyToken);
+    console.log("Fetching playlist tracks for " + playlistId + " with auth token: " + spotifyToken);
     let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
     let promise = fetch(fetchUrl, {
         method: "GET",
@@ -700,7 +740,7 @@ function saveNewFile(newPostForm) {
     let summary = formData.get("summary");
     let updatedSummary = '"' + summary + '"';
     formData.delete("summary");
-    formData.append("summary",updatedSummary);
+    formData.append("summary", updatedSummary);
 
     let json = formToJson(formData);
     console.log("Posting form data...");
@@ -713,9 +753,9 @@ function saveNewFile(newPostForm) {
         body: json
     }).then(response => {
         if (response.ok) {
-            popupMessage(`File created successfully`, STATUS.OK);
+            popupMessage(`File created successfully`, "", STATUS.OK);
         } else {
-            popupMessage(`Error creating file`, STATUS.ERROR);
+            popupMessage(`Error creating file`, "", STATUS.ERROR);
             console.log("Error creating file " + response.status);
         }
     }).finally((() => newFileWizard.clear()));
@@ -734,18 +774,18 @@ function releaseDraft() {
 }
 
 function saveAndUpdate() {
-    popupMessage("Saving...", STATUS.PROCESSING);
+    popupMessage("Saving...", "", STATUS.PROCESSING);
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
     formData.append("body", mdeContent);
     formData.append("slug", document.getElementById("form-meta-slug").value);
-    formData.append("layout",document.getElementById("form-meta-layout").value);
+    formData.append("layout", document.getElementById("form-meta-layout").value);
     // wrap the summary in quotes
     let summary = formData.get("summary");
     let updatedSummary = '"' + summary + '"';
     formData.delete("summary");
-    formData.append("summary",updatedSummary);
+    formData.append("summary", updatedSummary);
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",
@@ -757,13 +797,13 @@ function saveAndUpdate() {
         return response.json();
     }).then((data) => {
         if (data.status === 200 || data.status === 201) {
-            popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+            popupMessage("Saved changes to " + markdownFile.title, "", STATUS.OK);
         } else {
-            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
+            popupMessage("There was a problem saving '" + markdownFile.title + "'.", "Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
         }
     }).catch((error) => {
         console.log("SaveAndUpdate error: " + error);
-        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ", please try again later.\n" + error.message, STATUS.ERROR);
+        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ",", "please try again later.\n" + error.message, STATUS.ERROR);
     });
 
 }
@@ -807,13 +847,15 @@ function closeModal(modalName) {
     element.classList.remove("is-active");
 }
 
-function popupMessage(messageText, status) {
+function popupMessage(messageText, messageDetail, status) {
     closeAllModals()
     const modal = document.getElementById("generic-info-modal");
     const message = document.getElementById("generic-modal-message");
+    const detail = document.getElementById("generic-modal-detail");
     const statusIcon = document.getElementById("generic-modal-status");
     message.innerText = messageText;
-    let statusClass;
+    detail.innerText = messageDetail;
+    let statusClass = [];
     switch (status) {
         case STATUS.ERROR: {
             statusClass = ["mdi-alert-octagon", "has-text-danger"];

@@ -78,10 +78,10 @@ class GitService : ComponentsProvider {
 			)
 		} catch (mye: MalformedYamlException) {
 			println(mye)
-			return ServiceError(true,"Unable to open file '$path', an exception was thrown.\n $mye.messsage")
+			return ServiceError(error = true,summary = "Unable to open file '$path', an exception was thrown.", detail = mye.message)
 		} catch (ioe: IOException) {
 			println(ioe)
-			return ServiceError(true,ioe.message)
+			return ServiceError(error = true,summary = "Unable to open file '$path', an exception was thrown.", detail = ioe.message)
 		}
 		// TODO : Return something more meaningful if there is no valid post?
 		return ServiceError(true,"Unknown error in loading file '$path'")

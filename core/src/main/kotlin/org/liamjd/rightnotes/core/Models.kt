@@ -18,7 +18,7 @@ class FromGithub(val title: String, val layout: String, val slug: String, val pl
 }
 
 @Serializable
-class ServiceError(val error: Boolean, val errorText: String?) : GitResponse()
+class ServiceError(val error: Boolean, val summary: String?, val detail: String? = "") : GitResponse()
 
 @Serializable
 class FromJson(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
