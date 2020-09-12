@@ -38,7 +38,7 @@ val api = api<RightNotesComponents> {
 		handler(req)
 	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		get("/post-list") { req ->
 			val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
 			val postList = createHTMLDocument().ul {
@@ -60,24 +60,31 @@ val api = api<RightNotesComponents> {
 			}
 			req.returnHtml(postList.serialize(true))
 		}
-	}
+//	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		post("/load-markdown") { req ->
 			val fileToLoad = req.body<String>()
 			println("Loading markdown file $fileToLoad")
-			val markdown = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
-			if (markdown.path.isNotEmpty()) {
-				val json = Json(JsonConfiguration.Stable)
-				val jsonData = json.stringify(BasculePost.serializer(), markdown)
-				jsonData
-			} else {
-				req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+			val markdown: GitResponse = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
+			when(markdown) {
+				is BasculePost -> {
+					if (markdown.path.isNotEmpty()) {
+						val json = Json(JsonConfiguration.Stable)
+						val jsonData = json.stringify(BasculePost.serializer(), markdown)
+						jsonData
+					} else {
+						req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
+					}
+				}
+				is ServiceError -> {
+					""
+				}
 			}
-
 		}
-	}
-	auth(CognitoUserPoolsAuth) {
+//	}
+
+//	auth(CognitoUserPoolsAuth) {
 		post("/save-new-file") { req ->
 			val postContents = req.body<String>()
 			val json = Json(JsonConfiguration.Stable)
@@ -90,9 +97,9 @@ val api = api<RightNotesComponents> {
 			val status = if (result) HttpStatus.SC_CREATED else HttpStatus.SC_INTERNAL_SERVER_ERROR
 			req.responseBuilder().status(status).build(fileName)
 		}
-	}
+//	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		post("/save-and-update") { req ->
 			val postContents = req.body<String>()
 			val json = Json(JsonConfiguration.Stable)
@@ -102,8 +109,9 @@ val api = api<RightNotesComponents> {
 			val appResponse = gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
 			req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(),appResponse))
 		}
-	}
-	auth(CognitoUserPoolsAuth) {
+//	}
+
+//	auth(CognitoUserPoolsAuth) {
 		get("/image-list") { req ->
 			val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
 			val galleryList = mutableListOf<GalleryImage>()
@@ -120,17 +128,17 @@ val api = api<RightNotesComponents> {
 				req.responseBuilder().status(HttpStatus.SC_NO_CONTENT).build()
 			}
 		}
-	}
+//	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		post("/release-from-draft") { req ->
 			val pathToRelease = req.body<String>();
 			println("Attempting to release $pathToRelease from draft status")
 			""
 		}
-	}
+//	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		post("/upload-image") { req ->
 			val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
 			val contentDispositionHeader = req.headers["Content-Disposition"]
@@ -175,9 +183,9 @@ val api = api<RightNotesComponents> {
 				}
 			}
 		}
-	}
+//	}
 
-	auth(CognitoUserPoolsAuth) {
+//	auth(CognitoUserPoolsAuth) {
 		get("/spotify-token") { req ->
 			val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
 			val x = spotifyClient + ":" + SPOTIFY_SECRET
@@ -194,7 +202,7 @@ val api = api<RightNotesComponents> {
 				req.responseBuilder().status(HttpStatus.SC_UNAUTHORIZED)
 			}
 		}
-	}
+//	}
 
 }
 
