@@ -6,6 +6,7 @@ import ws.osiris.localserver.runLocalServer
 
 import org.liamjd.rightnotes.core.api
 import org.liamjd.rightnotes.core.createComponents
+import org.apache.http.HttpStatus
 
 /**
  * Main function for running the application in an HTTP server (Jetty).

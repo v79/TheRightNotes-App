@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => updateElement(fileListDom, data));
     }
 
-    authenticate();
+    // authenticate();
     loadFileList();
     loadImageGallery();
     spotifyToken = getSpotifyToken();
@@ -417,12 +417,15 @@ const dropArea = document.getElementById("image-upload-drop-area");
  * button actions
  */
 function loadMarkdownFile(fileName) {
+
+    popupMessage("Loading file '" + fileName + "'",STATUS.PROCESSING)
     tracklist = null;
     let promise = fetch("/load-markdown", {method: "POST", body: fileName,  headers: {
             'Authorization': 'Bearer ' + authToken
         }})
         .then((response) => response.text())
-        .then((data) => (markdownFile = updateMarkdownEditor(data, false)));
+        .then((data) => (markdownFile = updateMarkdownEditor(data, false)))
+        .then(closeAllModals);
 }
 
 function updateMarkdownEditor(data, disabled) {
@@ -805,10 +808,7 @@ function closeModal(modalName) {
 }
 
 function popupMessage(messageText, status) {
-    let existingModals = document.querySelectorAll(".modal");
-    for (let existingModal of existingModals) {
-        closeModal(existingModal.id);
-    }
+    closeAllModals()
     const modal = document.getElementById("generic-info-modal");
     const message = document.getElementById("generic-modal-message");
     const statusIcon = document.getElementById("generic-modal-status");
@@ -838,6 +838,12 @@ function popupMessage(messageText, status) {
     showModal(modal);
 }
 
+function closeAllModals() {
+    let existingModals = document.querySelectorAll(".modal");
+    for (let existingModal of existingModals) {
+        closeModal(existingModal.id);
+    }
+}
 
 /**
  * Transform the formData object into a JSON string. Fields whose names end in [] are treated as an Array, even if there's only a single value
