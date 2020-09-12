@@ -1,11 +1,13 @@
 package org.liamjd.rightnotes.core
 
+import com.charleskorn.kaml.MalformedYamlException
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import org.kohsuke.github.*
 import ws.osiris.core.ComponentsProvider
 import java.io.IOException
 import java.nio.charset.Charset
+import org.apache.http.HttpStatus
 
 class GitService : ComponentsProvider {
 	private val GIT_AUTH_TOKEN: String
@@ -46,7 +48,7 @@ class GitService : ComponentsProvider {
 	/**
 	 * Load a file with the given [path]
 	 */
-	fun loadMarkdownFile(userName: String, repoName: String, path: String, branchRef: String): BasculePost {
+	fun loadMarkdownFile(userName: String, repoName: String, path: String, branchRef: String): GitResponse {
 		println("Loading file '$path'")
 		try {
 			val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
@@ -74,13 +76,15 @@ class GitService : ComponentsProvider {
 					composers = post.composers,
 					genres = post.genres
 			)
+		} catch (mye: MalformedYamlException) {
+			println(mye)
+			return ServiceError(true,"Unable to open file '$path', an exception was thrown.\n $mye.messsage")
 		} catch (ioe: IOException) {
-			// TODO : Return error messages to the user if not possible
 			println(ioe)
+			return ServiceError(true,ioe.message)
 		}
 		// TODO : Return something more meaningful if there is no valid post?
-		return BasculePost(path = "", title =  "",
-				layout = "", body = "", slug = "", playlist = "", summary = "", composers = emptyList(), genres = emptyList())
+		return ServiceError(true,"Unknown error in loading file '$path'")
 	}
 
 	/**
@@ -194,3 +198,4 @@ class GitService : ComponentsProvider {
 	}
 
 }
+
