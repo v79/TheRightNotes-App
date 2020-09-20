@@ -7,24 +7,98 @@ let gallery;
 let initialGalleryElement;
 let tracklist;
 let spotifyToken;
-
+let authToken;
 /**
  * On document load activities to populate file list and image gallery.
  * Fetches spotify auth token
  */
 document.addEventListener("DOMContentLoaded", () => {
-    function loadFileList() {
-        const fileListDom = document.querySelector("#file-list");
+    authenticate();
 
-        let promise = fetch("/post-list")
-            .then((response) => response.text())
-            .then(data => updateElement(fileListDom, data));
-    }
-
-    loadFileList();
-    loadImageGallery();
-    spotifyToken = getSpotifyToken();
 });
+
+// set up authentication
+function authenticate() {
+
+    let promise = fetch("/preauth", {
+        method: 'GET'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.dev) {
+                console.log("local dev environment; no need to authenticate")
+                // no auth needed
+                loadFileList();
+                loadImageGallery();
+                spotifyToken = getSpotifyToken();
+            } else {
+                let loginUrl = `https://therightnotes-api-${data.awsAccountId}.auth.${data.awsRegion}.amazoncognito.com/login?` +
+                    `redirect_uri=https://api.therightnotes.org/&client_id=${data.cognitoClientId}&` +
+                    `response_type=token&scope=email+openid+phone+profile`;
+                authToken = parseIdToken();
+                console.log(`idToken (authToken): ${authToken}`);
+                if (authToken) {
+                    console.log("Authenticated successfully");
+                    loadFileList();
+                    loadImageGallery();
+                    spotifyToken = getSpotifyToken();
+                    return;
+                }
+                // not logged in - redirect to login page
+                console.log(`not logged in, redirecting to ${loginUrl}`);
+                window.location = loginUrl;
+            }
+        })
+        .catch(error => console.log(error))
+    // let awsAccountId = '086949310404';
+    // let awsRegion = 'eu-west-2';
+    // let cognitoClientId = 'urfqo0jeeh54d5mi1rf70cfmk';
+    // let apiId = 'ru93q91hc7';
+    //
+    // let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
+    //     `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
+    //     `response_type=token&scope=email+openid+phone+profile`;
+    //
+    // authToken = parseIdToken();
+    // console.log(`idToken (authToken): ${authToken}`);
+    //
+    // if (authToken) {
+    //     // document.getElementById('msg').innerText = 'Logged in';
+    //     // document.getElementById('requestButton').disabled = false;
+    //     return;
+    // }
+    // // not logged in - redirect to login page
+    // console.log(`not logged in, redirecting to ${loginUrl}`);
+    // window.location = loginUrl;
+}
+
+function parseIdToken() {
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let regex = /id_token=([^&]*)/;
+        let match = hash.match(regex);
+        if (match) {
+            return match[1];
+        }
+    }
+    return null;
+}
+
+/**
+ * Load complete list of markdown source files and update the dom element
+ */
+function loadFileList() {
+    const fileListDom = document.querySelector("#file-list");
+
+    fetch("/post-list", {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
+        .then((response) => response.text())
+        .then(data => updateElement(fileListDom, data));
+}
 
 /**
  * Image gallery
@@ -35,7 +109,11 @@ document.addEventListener("DOMContentLoaded", () => {
  * @returns JSON object containing list of composers
  */
 function loadImageGallery() {
-    let promise = fetch("/image-list")
+    let promise = fetch("/image-list", {
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
         .then((response) => {
             return response.json()
         })
@@ -370,11 +448,49 @@ const dropArea = document.getElementById("image-upload-drop-area");
 /**
  * button actions
  */
+
+/**
+ * Generic error handler; if response is not OK then throw Error to be caught in the Promise
+ * @param response
+ * @returns {{ok}|*}
+ */
+function handleErrors(response) {
+    console.dir(response);
+    if (!response.ok) {
+        throw Error(response);
+    }
+    return response;
+}
+
+/**
+ * Load the markdown source file into the markdown editor
+ * @param fileName
+ */
 function loadMarkdownFile(fileName) {
+
+    popupMessage("Loading file '" + fileName + "'", "", STATUS.PROCESSING)
     tracklist = null;
-    let promise = fetch("/load-markdown", {method: "POST", body: fileName})
+
+    fetch("/load-markdown", {
+        method: "POST", body: fileName, headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    }).then(response => {
+        if (!response.ok) {
+            throw response
+        } // will be caught as 'error' below
+        return response;
+
+    })
         .then((response) => response.text())
-        .then((data) => (markdownFile = updateMarkdownEditor(data, false)));
+        .then((data) => (markdownFile = updateMarkdownEditor(data, false)))
+        .catch(error => {
+            if (error.json) {
+                error.json().then(e => {
+                    popupMessage(e["summary"], e["detail"], STATUS.ERROR);
+                })
+            }
+        })
 }
 
 function updateMarkdownEditor(data, disabled) {
@@ -382,23 +498,29 @@ function updateMarkdownEditor(data, disabled) {
     const formElements = form.elements;
     const md_textarea = document.getElementById("form-md-text");
     const releaseDraftButton = document.getElementById("btn-release-draft");
-    var o = JSON.parse(data);
-
-    formElements["form-meta-filepath"].value = o.path;
-    formElements["form-meta-title"].value = o.title;
-    formElements["form-meta-slug"].value = o.slug;
-    formElements["form-meta-summary"].value = o.summary;
-    formElements["form-meta-playlist"].value = o.playlist;
-    formElements["form-meta-composers"].value = o.composers;
-    formElements["form-meta-genres"].value = o.genres;
+    let mdObject;
+    try {
+        mdObject = JSON.parse(data);
+    } catch {
+        console.error("Failed to parse markdown data: " + data);
+        return;
+    }
+    formElements["form-meta-filepath"].value = mdObject.path;
+    formElements["form-meta-title"].value = mdObject.title;
+    formElements["form-meta-slug"].value = mdObject.slug;
+    formElements["form-meta-summary"].value = mdObject.summary;
+    formElements["form-meta-playlist"].value = mdObject.playlist;
+    formElements["form-meta-composers"].value = mdObject.composers;
+    formElements["form-meta-genres"].value = mdObject.genres;
+    formElements["form-meta-layout"].value = mdObject.layout;
 
     // md_textarea.textContent = o.body;
-    simplemde.value(o.body)
+    simplemde.value(mdObject.body)
     md_textarea.disabled = false;
     hide("welcome-message");
     unhide(form.id);
-    let isDraft = o.path.substring(o.path.lastIndexOf("/") + 1).startsWith("__");
-    let loadedFile = new MarkdownFile(o.path, o.title, isDraft);
+    let isDraft = mdObject.path.substring(mdObject.path.lastIndexOf("/") + 1).startsWith("__");
+    let loadedFile = new MarkdownFile(mdObject.path, mdObject.title, isDraft);
     if (!isDraft) {
         hide("btn-release-draft");
     } else {
@@ -407,6 +529,8 @@ function updateMarkdownEditor(data, disabled) {
 
     // get the track listing
     getPlaylistTracks();
+    // and close modal
+    closeAllModals();
     return loadedFile;
 }
 
@@ -470,6 +594,7 @@ function uploadFile(file) {
     fetch("/upload-image", {
         headers: {
             'Content-Type': 'image/jpeg',
+            'Authorization': 'Bearer ' + authToken,
             'Content-Disposition': 'attachment; filename="' + file.name + '"'
         },
         method: "POST",
@@ -477,9 +602,9 @@ function uploadFile(file) {
     })
         .then((response) => {
             if (response.ok) {
-                popupMessage(`Upload of image ${file.name} completed.\nIt has been resized and converted and will appear in\nthe Composer Portraits box`, STATUS.OK);
+                popupMessage(`Upload of image ${file.name} completed.","It has been resized and converted and will appear in\nthe Composer Portraits box`, STATUS.OK);
             } else {
-                popupMessage(`Upload of image ${file.name} failed.\nPlease try again with a different file.`, STATUS.ERROR);
+                popupMessage(`Upload of image ${file.name} failed.","Please try again with a different file.`, STATUS.ERROR);
             }
         })
         .catch(() => {
@@ -526,6 +651,7 @@ function getSpotifyToken() {
         method: "GET",
         headers: {
             'Accept': 'text/plain',
+            'Authorization': 'Bearer ' + authToken
         }
     }).then((response) => {
         return response.text();
@@ -545,6 +671,7 @@ function getPlaylistTracks() {
     const trackListingDiv = document.getElementById("track-listing-container");
     const playlistId = document.getElementById("form-meta-playlist").value;
 
+    console.log("Fetching playlist tracks for " + playlistId + " with auth token: " + spotifyToken);
     let fetchUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
     let promise = fetch(fetchUrl, {
         method: "GET",
@@ -641,15 +768,26 @@ function saveNewFile(newPostForm) {
     for (let comp of updatedComposers) {
         formData.append("composers[]", comp)
     }
+    // need to escape the summary, may contain YAML characters such as the colon, and wrap it in quotes
+    let summary = formData.get("summary");
+    let updatedSummary = '"' + summary + '"';
+    formData.delete("summary");
+    formData.append("summary", updatedSummary);
+
     let json = formToJson(formData);
+    console.log("Posting form data...");
+    console.log(json);
     let promise = fetch("/save-new-file", {
         method: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        },
         body: json
     }).then(response => {
         if (response.ok) {
-            popupMessage(`File created successfully`, STATUS.OK);
+            popupMessage(`File created successfully`, "", STATUS.OK);
         } else {
-            popupMessage(`Error creating file`, STATUS.ERROR);
+            popupMessage(`Error creating file`, "", STATUS.ERROR);
             console.log("Error creating file " + response.status);
         }
     }).finally((() => newFileWizard.clear()));
@@ -660,32 +798,44 @@ function releaseDraft() {
     console.log("Attempting to release draft file " + markdownFile.filename + " which is draft: " + markdownFile.isDraft);
     let promise = fetch("/release-from-draft", {
         method: "POST",
-        body: markdownFile.filename
+        body: markdownFile.filename,
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
     }).finally((data) => window.location.replace("/"));
 }
 
 function saveAndUpdate() {
-    popupMessage("Saving...", STATUS.PROCESSING);
+    popupMessage("Saving...", "", STATUS.PROCESSING);
     let mdeContent = simplemde.value();
     let form = document.getElementById("form-md");
     let formData = new FormData(form);
     formData.append("body", mdeContent);
     formData.append("slug", document.getElementById("form-meta-slug").value);
+    formData.append("layout", document.getElementById("form-meta-layout").value);
+    // wrap the summary in quotes
+    let summary = formData.get("summary");
+    let updatedSummary = '"' + summary + '"';
+    formData.delete("summary");
+    formData.append("summary", updatedSummary);
     let formJson = formToJson(formData);
     let promise = fetch("/save-and-update", {
         method: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        },
         body: formJson
     }).then((response) => {
         return response.json();
     }).then((data) => {
         if (data.status === 200 || data.status === 201) {
-            popupMessage("Saved changes to " + markdownFile.title, STATUS.OK);
+            popupMessage("Saved changes to " + markdownFile.title, "", STATUS.OK);
         } else {
-            popupMessage("There was a problem saving '" + markdownFile.title + "'. Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
+            popupMessage("There was a problem saving '" + markdownFile.title + "'.", "Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
         }
     }).catch((error) => {
         console.log("SaveAndUpdate error: " + error);
-        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ", please try again later.\n" + error.message, STATUS.ERROR);
+        popupMessage("There was an unspecified problem saving\n" + markdownFile.title + ",", "please try again later.\n" + error.message, STATUS.ERROR);
     });
 
 }
@@ -729,16 +879,15 @@ function closeModal(modalName) {
     element.classList.remove("is-active");
 }
 
-function popupMessage(messageText, status) {
-    let existingModals = document.querySelectorAll(".modal");
-    for (let existingModal of existingModals) {
-        closeModal(existingModal.id);
-    }
+function popupMessage(messageText, messageDetail, status) {
+    closeAllModals()
     const modal = document.getElementById("generic-info-modal");
     const message = document.getElementById("generic-modal-message");
+    const detail = document.getElementById("generic-modal-detail");
     const statusIcon = document.getElementById("generic-modal-status");
     message.innerText = messageText;
-    let statusClass;
+    detail.innerText = messageDetail;
+    let statusClass = [];
     switch (status) {
         case STATUS.ERROR: {
             statusClass = ["mdi-alert-octagon", "has-text-danger"];
@@ -763,6 +912,12 @@ function popupMessage(messageText, status) {
     showModal(modal);
 }
 
+function closeAllModals() {
+    let existingModals = document.querySelectorAll(".modal");
+    for (let existingModal of existingModals) {
+        closeModal(existingModal.id);
+    }
+}
 
 /**
  * Transform the formData object into a JSON string. Fields whose names end in [] are treated as an Array, even if there's only a single value

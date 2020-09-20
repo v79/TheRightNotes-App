@@ -1,12 +1,13 @@
 package org.liamjd.rightnotes.core
 
+import com.charleskorn.kaml.MalformedYamlException
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import org.apache.http.HttpStatus
 import org.kohsuke.github.*
 import ws.osiris.core.ComponentsProvider
 import java.io.IOException
 import java.nio.charset.Charset
+import org.apache.http.HttpStatus
 
 class GitService : ComponentsProvider {
 	private val GIT_AUTH_TOKEN: String
@@ -47,7 +48,7 @@ class GitService : ComponentsProvider {
 	/**
 	 * Load a file with the given [path]
 	 */
-	fun loadMarkdownFile(userName: String, repoName: String, path: String, branchRef: String): BasculePost {
+	fun loadMarkdownFile(userName: String, repoName: String, path: String, branchRef: String): GitResponse {
 		println("Loading file '$path'")
 		try {
 			val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
@@ -62,14 +63,28 @@ class GitService : ComponentsProvider {
 			val post = Yaml(configuration = notStrict).parse(FromGithub.serializer(), yaml)
 			post.body = bodyText
 
-			return BasculePost(path, post.title, bodyText, post.slug, post.playlist
-					?: "", post.summary
-					?: "", post.composers, post.genres)
+			return BasculePost(
+					path = path,
+					title = post.title,
+					layout = post.layout,
+					body = bodyText,
+					slug = post.slug,
+					playlist = post.playlist
+							?: "",
+					summary = post.summary
+							?: "",
+					composers = post.composers,
+					genres = post.genres
+			)
+		} catch (mye: MalformedYamlException) {
+			println(mye)
+			return ServiceError(error = true,summary = "Unable to open file '$path', an exception was thrown.", detail = mye.message)
 		} catch (ioe: IOException) {
 			println(ioe)
+			return ServiceError(error = true,summary = "Unable to open file '$path', an exception was thrown.", detail = ioe.message)
 		}
-		return BasculePost("", "",
-				"", "", "", "", emptyList(), emptyList())
+		// TODO : Return something more meaningful if there is no valid post?
+		return ServiceError(true,"Unknown error in loading file '$path'")
 	}
 
 	/**
@@ -183,3 +198,4 @@ class GitService : ComponentsProvider {
 	}
 
 }
+

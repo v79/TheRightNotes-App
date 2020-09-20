@@ -14,16 +14,17 @@ val config = ApplicationConfig(
 		lambdaMemorySizeMb = 512,
 		lambdaTimeout = Duration.ofSeconds(30),
 		environmentVariables = mapOf(
-				"GIT_AUTH_TOKEN" to System.getenv("GIT_AUTH_TOKEN")
+				"GIT_AUTH_TOKEN" to System.getenv("GIT_AUTH_TOKEN"),
+				"SPOTIFY_SECRET" to System.getenv("SPOTIFY_SECRET")
 		),
-		authConfig = AuthConfig.CognitoUserPools("arn:aws:cognito-idp:eu-west-2:086949310404:userpool/eu-west-2_ZvVjWGjDQ"),
+		authConfig = AuthConfig.CognitoUserPools("arn:aws:cognito-idp:eu-west-2:086949310404:userpool/eu-west-2_NN6UXKr5p"),
 		stages = listOf(
 				Stage(
 						name = "dev",
 						description = "Development stage",
 						deployOnUpdate = true,
 						variables = mapOf(
-								"VAR1" to "devValue1",
+								"dev" to "true",
 								"VAR2" to "devValue2"
 						)
 				),
@@ -32,7 +33,7 @@ val config = ApplicationConfig(
 						description = "Production stage",
 						deployOnUpdate = false,
 						variables = mapOf(
-								"VAR1" to "prodValue1",
+								"dev" to "false",
 								"VAR2" to "prodValue2"
 						)
 				)

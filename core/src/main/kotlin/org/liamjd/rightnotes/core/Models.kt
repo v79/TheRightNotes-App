@@ -3,20 +3,25 @@ package org.liamjd.rightnotes.core
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+sealed class GitResponse
+
 // is this really needed? Could just use FromGithub, below, instead?
 @Serializable
-class BasculePost(val path: String, val title: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>)
+class BasculePost(val path: String, val title: String, val layout: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>) : GitResponse()
 
 /**
  * Oh what a tangled web we weave, when first we practice to deceive...
  */
 @Serializable
-class FromGithub(val title: String, val slug: String, val playlist: String?, val summary: String?, val composers: List<String>, val genres: List<String>) {
+class FromGithub(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, val composers: List<String>, val genres: List<String>) {
 	var body: String? = null
 }
 
 @Serializable
-class FromJson(val title: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
+class ServiceError(val error: Boolean, val summary: String?, val detail: String? = "") : GitResponse()
+
+@Serializable
+class FromJson(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
 
 	fun toMarkdown(): String {
 		val sb = StringBuilder()
@@ -24,7 +29,7 @@ class FromJson(val title: String, val slug: String, val playlist: String?, val s
 		sb.appendln("title: $title")
 		sb.appendln("slug: $slug")
 		sb.appendln("author: T W Davison")
-		sb.appendln("layout: post")
+		sb.appendln("layout: $layout")
 		// TODO: sb.appendln("date: DATE")
 		sb.appendln("playlist: $playlist")
 
