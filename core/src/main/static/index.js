@@ -13,47 +13,63 @@ let authToken;
  * Fetches spotify auth token
  */
 document.addEventListener("DOMContentLoaded", () => {
-    function loadFileList() {
-        const fileListDom = document.querySelector("#file-list");
+    authenticate();
 
-        let promise = fetch("/post-list", {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + authToken
-            }
-        })
-            .then((response) => response.text())
-            .then(data => updateElement(fileListDom, data));
-    }
-
-    // authenticate();
-    loadFileList();
-    loadImageGallery();
-    spotifyToken = getSpotifyToken();
 });
 
 // set up authentication
 function authenticate() {
-    let awsAccountId = '086949310404';
-    let awsRegion = 'eu-west-2';
-    let cognitoClientId = 'urfqo0jeeh54d5mi1rf70cfmk';
-    let apiId = 'ru93q91hc7';
 
-    let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
-        `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
-        `response_type=token&scope=email+openid+phone+profile`;
-
-    authToken = parseIdToken();
-    console.log(`idToken (authToken): ${authToken}`);
-
-    if (authToken) {
-        // document.getElementById('msg').innerText = 'Logged in';
-        // document.getElementById('requestButton').disabled = false;
-        return;
-    }
-    // not logged in - redirect to login page
-    console.log(`not logged in, redirecting to ${loginUrl}`);
-    window.location = loginUrl;
+    let promise = fetch("/preauth", {
+        method: 'GET'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.dev) {
+                console.log("local dev environment; no need to authenticate")
+                // no auth needed
+                loadFileList();
+                loadImageGallery();
+                spotifyToken = getSpotifyToken();
+            } else {
+                let loginUrl = `https://therightnotes-api-${data.awsAccountId}.auth.${data.awsRegion}.amazoncognito.com/login?` +
+                    `redirect_uri=https://api.therightnotes.org/&client_id=${data.cognitoClientId}&` +
+                    `response_type=token&scope=email+openid+phone+profile`;
+                authToken = parseIdToken();
+                console.log(`idToken (authToken): ${authToken}`);
+                if (authToken) {
+                    console.log("Authenticated successfully");
+                    loadFileList();
+                    loadImageGallery();
+                    spotifyToken = getSpotifyToken();
+                    return;
+                }
+                // not logged in - redirect to login page
+                console.log(`not logged in, redirecting to ${loginUrl}`);
+                window.location = loginUrl;
+            }
+        })
+        .catch(error => console.log(error))
+    // let awsAccountId = '086949310404';
+    // let awsRegion = 'eu-west-2';
+    // let cognitoClientId = 'urfqo0jeeh54d5mi1rf70cfmk';
+    // let apiId = 'ru93q91hc7';
+    //
+    // let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
+    //     `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
+    //     `response_type=token&scope=email+openid+phone+profile`;
+    //
+    // authToken = parseIdToken();
+    // console.log(`idToken (authToken): ${authToken}`);
+    //
+    // if (authToken) {
+    //     // document.getElementById('msg').innerText = 'Logged in';
+    //     // document.getElementById('requestButton').disabled = false;
+    //     return;
+    // }
+    // // not logged in - redirect to login page
+    // console.log(`not logged in, redirecting to ${loginUrl}`);
+    // window.location = loginUrl;
 }
 
 function parseIdToken() {
@@ -66,6 +82,22 @@ function parseIdToken() {
         }
     }
     return null;
+}
+
+/**
+ * Load complete list of markdown source files and update the dom element
+ */
+function loadFileList() {
+    const fileListDom = document.querySelector("#file-list");
+
+    fetch("/post-list", {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
+        .then((response) => response.text())
+        .then(data => updateElement(fileListDom, data));
 }
 
 /**

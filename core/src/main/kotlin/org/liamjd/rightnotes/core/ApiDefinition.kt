@@ -38,6 +38,16 @@ val api = api<RightNotesComponents> {
 		handler(req)
 	}
 
+	// fetch some of the authentication parameters
+	get("/preauth") { req ->
+		val awsAccountId = "086949310404"
+		val awsRegion = "eu-west-2"
+		val cognitoClientId = "urfqo0jeeh54d5mi1rf70cfmk"
+		val apiId = "ru93q91hc7"
+		val devJson = mapOf("dev" to isLocal, "awsAccountId" to awsAccountId, "awsRegion" to awsRegion, "cognitoClientId" to cognitoClientId, "apiId" to apiId)
+		req.responseBuilder().status(HttpStatus.SC_OK).build(devJson)
+	}
+
 	auth(CognitoUserPoolsAuth) {
 		get("/post-list") { req ->
 			val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
@@ -226,14 +236,26 @@ interface RightNotesComponents : ComponentsProvider {
 	val gitService: GitService
 	val imageService: ImageProcessor
 	val s3Service: S3Service
+	val isLocal: Boolean
 }
 
 class RightNotesComponentsImpl : RightNotesComponents {
 	override val gitService: GitService = GitService()
 	override val imageService: ImageProcessor = ImageProcessor()
 	override val s3Service: S3Service = S3Service()
+	override val isLocal: Boolean
+		get() = false
+}
+
+class RightNotesLocalImpl : RightNotesComponents {
+	override val gitService: GitService = GitService()
+	override val imageService: ImageProcessor = ImageProcessor()
+	override val s3Service: S3Service = S3Service()
+	override val isLocal: Boolean
+		get() = true
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
+fun createLocalComponents() : RightNotesComponents = RightNotesLocalImpl()
 
 

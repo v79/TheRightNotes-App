@@ -5,7 +5,7 @@ import ws.osiris.localserver.ServerArgs
 import ws.osiris.localserver.runLocalServer
 
 import org.liamjd.rightnotes.core.api
-import org.liamjd.rightnotes.core.createComponents
+import org.liamjd.rightnotes.core.createLocalComponents
 import org.apache.http.HttpStatus
 
 /**
@@ -18,6 +18,6 @@ import org.apache.http.HttpStatus
 fun main(args: Array<String>) {
     val serverArgs = ServerArgs()
     JCommander.newBuilder().addObject(serverArgs).build().parse(*args)
-    val components = createComponents()
+    val components = createLocalComponents()
     runLocalServer(api, components, serverArgs.port, serverArgs.root, "core/src/main/static")
 }

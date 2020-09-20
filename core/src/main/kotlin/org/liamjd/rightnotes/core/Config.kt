@@ -24,7 +24,7 @@ val config = ApplicationConfig(
 						description = "Development stage",
 						deployOnUpdate = true,
 						variables = mapOf(
-								"VAR1" to "devValue1",
+								"dev" to "true",
 								"VAR2" to "devValue2"
 						)
 				),
@@ -33,7 +33,7 @@ val config = ApplicationConfig(
 						description = "Production stage",
 						deployOnUpdate = false,
 						variables = mapOf(
-								"VAR1" to "prodValue1",
+								"dev" to "false",
 								"VAR2" to "prodValue2"
 						)
 				)
