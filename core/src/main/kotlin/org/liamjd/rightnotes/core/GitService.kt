@@ -197,5 +197,21 @@ class GitService : ComponentsProvider {
 		}
 	}
 
+	fun loadOrderFile(userName: String, repoName: String, path: String, branchRef: String): String {
+		println("Attempting to fetch ordering file '$path'")
+		try {
+			val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
+			val repo = github.getRepository("$userName/$repoName")
+			val content = repo.getFileContent(path, branchRef)
+			val iStream = content.read()
+			val orderFile = iStream.bufferedReader(Charset.defaultCharset()).readText()
+			return orderFile
+		} catch(ioe: IOException) {
+			println(ioe)
+		}
+		return ""
+	}
+
+
 }
 

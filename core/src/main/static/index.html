@@ -29,10 +29,15 @@
 						Articles
 					</p>
 					<div class="panel-block">
-						<div id="file-buttons control">
+						<div id="file-buttons" class="control">
 							<a href="#" id="file-new" title="Create new post" class="button is-primary"
 							   onclick="newFile()"><span
 									class="mdi mdi-file-plus">New</span></a>
+						</div>
+						<div id="file-reorder-button" class="contro">
+							<a href="#" id="file-reorder" title="Change ordering" class="button" onclick="sortPosts()">
+								<span class="mdi mdi-sort-alphabetical-variant">Order</span>
+							</a>
 						</div>
 					</div>
 					<div class="panel-block">
@@ -369,6 +374,7 @@
 		</footer>
 	</div>
 </div>
+
 <!-- create spotify modal -->
 <div id="create-spotify-links-modal" class="modal">
 	<div class="modal-background"></div>
@@ -382,6 +388,29 @@
 		</section>
 		<footer class="modal-card-foot">
 			<button class="button is-danger" onclick="closeModal('create-spotify-links-modal');">Cancel</button>
+		</footer>
+	</div>
+</div>
+
+<!-- post reordering dialog -->
+<div id="reorder-posts-modal" class="modal">
+	<div class="modal-background"></div>
+	<div class="modal-card">
+		<header class="modal-card-head">
+			<p class="modal-card-title">Change ordering of posts</p>
+			<button class="delete" aria-label="close" onclick="closeModal('reorder-posts-modal');"></button>
+		</header>
+		<section class="modal-card-body">
+			<div id="reorder-posts-list">
+				<ul id="reorder-posts-ul">
+
+				</ul>
+			</div>
+		</section>
+		<footer class="modal-card-foot">
+			<button class="button is-danger" id="btn-cancel-reorder" onclick="closeModal('reorder-posts-modal');">
+				Cancel
+			</button>
 		</footer>
 	</div>
 </div>

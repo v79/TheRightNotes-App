@@ -57,3 +57,12 @@ figcaption {
 	left: -272px;
 	border: 1px solid #a1a1a1;
 }
+
+/* file sorting dialog */
+.sortable {
+	font-family: monospace;
+}
+
+.sortable.hovering {
+	text-decoration: underline;
+}

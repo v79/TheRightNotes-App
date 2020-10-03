@@ -38,7 +38,10 @@ val api = api<RightNotesComponents> {
 		handler(req)
 	}
 
-	// fetch some of the authentication parameters
+	/**
+	 * Get the hard-coded AWS authentication configuration details
+	 * @return JSON containing four AWS config strings, plus "dev" = true if running Locally (not on AWS), otherwise "dev" = false
+	 */
 	get("/preauth") { req ->
 		val awsAccountId = "086949310404"
 		val awsRegion = "eu-west-2"
@@ -48,6 +51,10 @@ val api = api<RightNotesComponents> {
 		req.responseBuilder().status(HttpStatus.SC_OK).build(devJson)
 	}
 
+	/**
+	 * Get a complete listing of markdown files
+	 * @return as HTML list
+	 */
 	auth(CognitoUserPoolsAuth) {
 		get("/post-list") { req ->
 			val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
@@ -72,6 +79,11 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Load a source markdown file
+	 * @param fileToLoad from request body as String
+	 * @return as JSON
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/load-markdown") { req ->
 			val fileToLoad = req.body<String>()
@@ -95,6 +107,11 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Create a new draft file
+	 * @param postContents markdown source code in body as String
+	 * @return created file name
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/save-new-file") { req ->
 			val postContents = req.body<String>()
@@ -110,6 +127,11 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Update an existing markdown source file
+	 *  @param postContents markdown source code in body as String
+	 *  @return appResponse JSON object
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/save-and-update") { req ->
 			val postContents = req.body<String>()
@@ -122,6 +144,10 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Retrieve a list of all images
+	 * @return list of GalleryImages as JSON
+	 */
 	auth(CognitoUserPoolsAuth) {
 		get("/image-list") { req ->
 			val imageList = gitService.getGitHubFileList("v79", "rightnotes", "assets/images/scaled", "master")
@@ -141,6 +167,10 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * TODO: Release a markdown file from draft mode, forcing a rename
+	 * @param pathToRelease full path of file to be renamed
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/release-from-draft") { req ->
 			val pathToRelease = req.body<String>();
@@ -149,6 +179,15 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Upload and resize an image file
+	 * @param contentTypeHeader from request header
+	 * @param contentDispositionHeader from request header
+	 * @param source file name from contentDispositionHeader
+	 * @param mimeType of source file from contentTypeHeader
+	 * @param image bytearray input stream from body as binary
+	 * @return scaledImage byte stream with headers
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/upload-image") { req ->
 			val contentTypeHeader = req.headers[HttpHeaders.CONTENT_TYPE]
@@ -196,14 +235,15 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Get Spotify authentication token from client + secret key, specified in environment configuration
+	 * @return acess_token as JSON
+	 */
 	auth(CognitoUserPoolsAuth) {
 		get("/spotify-token") { req ->
 			val spotifyClient = "4713cdaa7a21413a9ce0e6910ab8ec19";
 			val x = spotifyClient + ":" + SPOTIFY_SECRET
-			println("Getting spotify token for " + x)
-
 			val spotifyAuth = Base64.getEncoder().encode(x.toByteArray()).toString(Charset.defaultCharset())
-			println(spotifyAuth)
 
 			val spotifyResponse = khttp.post("https://accounts.spotify.com/api/token", headers = mapOf(("Authorization" to "Basic $spotifyAuth"), ("Accept" to "application/json"), ("Content-Type" to "application/x-www-form-urlencoded"), ("Accept-Encoding" to "gzip")), data = "grant_type=client_credentials")
 
@@ -211,6 +251,17 @@ val api = api<RightNotesComponents> {
 				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(spotifyResponse.jsonObject.get("access_token"))
 			} else {
 				req.responseBuilder().status(HttpStatus.SC_UNAUTHORIZED)
+			}
+		}
+	}
+
+	auth(CognitoUserPoolsAuth) {
+		get("/ordering") { req ->
+			val orderFile = gitService.loadOrderFile("v79", "rightnotes", "order.txt", "master")
+			if(orderFile.length > 0 ) {
+				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type","text/plain").build(orderFile)
+			} else {
+				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
 			}
 		}
 	}
@@ -256,6 +307,6 @@ class RightNotesLocalImpl : RightNotesComponents {
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
-fun createLocalComponents() : RightNotesComponents = RightNotesLocalImpl()
+fun createLocalComponents() : RightNotesComponents = RightNotesLocalImpl() // when running locally, not on AWS
 
 

@@ -840,6 +840,50 @@ function saveAndUpdate() {
 
 }
 
+function sortPosts() {
+    let modal = document.getElementById("reorder-posts-modal");
+
+    let promise = fetch("/ordering", {
+        method: "GET",
+        headers: {
+            'Authorization': 'Bearer' + authToken
+        }
+    }).then((response) => {
+        if (response.status !== 200) {
+            popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + response.message, STATUS.ERROR);
+        }
+       return response.text();
+    }).then((data) => {
+        let originalOrderFile = data;
+        let orderArray = splitOrderFile(originalOrderFile.valueOf().toString());
+        let ul = document.getElementById("reorder-posts-ul");
+        for(let line = 0; line < orderArray.length; line++) {
+            let li = document.createElement("li");
+            li.id = "" + line;
+            li.classList.add("sortable");
+            li.addEventListener("mouseover", function() {
+                this.classList.add("hovering");
+            })
+            li.addEventListener("mouseleave", function () {
+                this.classList.remove("hovering");
+            })
+            li.innerText = orderArray[line];
+            ul.appendChild(li);
+        }
+        console.log("Order file: ");
+        console.log(data);
+    }).catch((error) => {
+        console.log("Fetching ordering file error: " + error);
+        popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + error, STATUS.ERROR);
+    })
+
+    showModal(modal);
+}
+
+function splitOrderFile(file) {
+    return file.split("\n");
+}
+
 /**
  * General DOM helper methods
  */
