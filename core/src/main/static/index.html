@@ -402,14 +402,17 @@
 		</header>
 		<section class="modal-card-body">
 			<div id="reorder-posts-list">
-				<ul id="reorder-posts-ul">
+				<ol id="reorder-posts-ul">
 
-				</ul>
+				</ol>
 			</div>
 		</section>
 		<footer class="modal-card-foot">
 			<button class="button is-danger" id="btn-cancel-reorder" onclick="closeModal('reorder-posts-modal');">
 				Cancel
+			</button>
+			<button class="button is-normal" id="btn-save-reorder" disabled>
+				Save changes
 			</button>
 		</footer>
 	</div>
@@ -501,5 +504,6 @@
         }
     });
 </script>
+<script src="https://unpkg.com/drag-on-drop"></script> <!-- Dragon Drop library for sorting -->
 </body>
 </html>

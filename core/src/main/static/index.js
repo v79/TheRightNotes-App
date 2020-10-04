@@ -14,7 +14,6 @@ let authToken;
  */
 document.addEventListener("DOMContentLoaded", () => {
     authenticate();
-
 });
 
 // set up authentication
@@ -842,7 +841,30 @@ function saveAndUpdate() {
 
 function sortPosts() {
     let modal = document.getElementById("reorder-posts-modal");
+    var orderingChanged = false;
+    let ul = document.getElementById("reorder-posts-ul");
+    let dragonDrop = new DragonDrop(ul, {
+        item: 'li',
+        handle: 'button',
+        nested: false
+    });
 
+    console.log("sortPosts: dragonDrop: ", dragonDrop);
+
+    // register reorder handler
+  /*  dragonDrop.on('reorder', function (container, item) {
+            const pos = items.indexOf(item) + 1;
+            const text = item.innerText;
+            item.classList.add("row-changed");
+            orderingChanged = true;
+            document.getElementById("btn-save-reorder").removeAttribute("disabled");
+            console.log(`The dragon's list has been reordered, ${text} is now item ${pos} of ${items.length}`);
+        })
+        .on('grabbed', function (container, item) {
+            console.log('grabbed: ', item);
+        });*/
+
+    // load file
     let promise = fetch("/ordering", {
         method: "GET",
         headers: {
@@ -852,32 +874,82 @@ function sortPosts() {
         if (response.status !== 200) {
             popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + response.message, STATUS.ERROR);
         }
-       return response.text();
+        return response.text();
     }).then((data) => {
         let originalOrderFile = data;
         let orderArray = splitOrderFile(originalOrderFile.valueOf().toString());
-        let ul = document.getElementById("reorder-posts-ul");
-        for(let line = 0; line < orderArray.length; line++) {
+
+        for (let line = 0; line < orderArray.length; line++) {
             let li = document.createElement("li");
-            li.id = "" + line;
+            // li.appendChild(createOrderingArrows(line));
+            li.id = "row-" + line;
+            li.setAttribute("data-rownum", "" + line);
             li.classList.add("sortable");
-            li.addEventListener("mouseover", function() {
-                this.classList.add("hovering");
-            })
-            li.addEventListener("mouseleave", function () {
-                this.classList.remove("hovering");
-            })
-            li.innerText = orderArray[line];
+            let dragButton = document.createElement("button");
+            dragButton.setAttribute("aria-describedby", "dragon-helper");
+            dragButton.classList.add("mdi", "mdi-drag");
+
+            li.appendChild(dragButton);
+            li.appendChild(document.createTextNode(orderArray[line]));
             ul.appendChild(li);
+
         }
-        console.log("Order file: ");
-        console.log(data);
+
+        console.log("sortPosts: data received: dragonDrop: ", dragonDrop);
+
+        dragonDrop
+            .on('grabbed', (container, item) => console.log(`Item ${item.innerText} grabbed`))
+            .on('dropped', (container, item) => console.log(`Item ${item.innerText} dropped`))
+            .on('reorder', (container, item) => console.log(`Reorder: ${item.innerText} has moved`))
+            .on('cancel', () => console.log('Reordering cancelled'));
+
+        console.log("sortPosts: data received: listeners added: dragonDrop: ", dragonDrop);
+
+        dragonDrop.initElements(ul);
+
+        console.log("sortPosts: data received: initElements called: dragonDrop: ", dragonDrop);
+
     }).catch((error) => {
         console.log("Fetching ordering file error: " + error);
         popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + error, STATUS.ERROR);
     })
 
     showModal(modal);
+}
+
+function createOrderingArrows(lineNum) {
+    let arrowSpan = document.createElement("span");
+    arrowSpan.classList.add("sorting-arrows");
+    arrowSpan.id = "arrows-" + lineNum;
+    let upArrowSpan = document.createElement("span");
+    upArrowSpan.classList.add("mdi", "mdi-arrow-up");
+    upArrowSpan.addEventListener("click", ev => moveRowUp(lineNum));
+    let downArrowSpan = document.createElement("span");
+    downArrowSpan.classList.add("mdi", "mdi-arrow-down");
+    downArrowSpan.addEventListener("click", ev => moveRowDown(lineNum));
+    arrowSpan.appendChild(upArrowSpan);
+    arrowSpan.appendChild(downArrowSpan);
+    return arrowSpan;
+}
+
+function moveRowUp(lineNum) {
+    console.log("click up on " + lineNum);
+    let selectedRow = document.getElementById("row-" + lineNum);
+    selectedRow.classList.add("row-changed");
+    let predecessor = document.getElementById("row-" + (lineNum - 1));
+    if (predecessor != null) {
+        let parentList = selectedRow.parentNode;
+        let selectedRowNum = selectedRow.getAttribute("data-rownum")
+        selectedRow.setAttribute("data-rownum", "" + (selectedRowNum - 1));
+        predecessor.setAttribute("data-rownum", selectedRowNum);
+        parentList.removeChild(selectedRow);
+        parentList.insertBefore(selectedRow, predecessor);
+    }
+
+}
+
+function moveRowDown(lineNum) {
+    console.log("click down on " + lineNum);
 }
 
 function splitOrderFile(file) {
