@@ -842,27 +842,19 @@ function saveAndUpdate() {
 function sortPosts() {
     let modal = document.getElementById("reorder-posts-modal");
     var orderingChanged = false;
+    let saveButton = document.getElementById("btn-save-reorder");
     let ul = document.getElementById("reorder-posts-ul");
-    let dragonDrop = new DragonDrop(ul, {
-        item: 'li',
-        handle: 'button',
-        nested: false
-    });
 
-    console.log("sortPosts: dragonDrop: ", dragonDrop);
-
-    // register reorder handler
-  /*  dragonDrop.on('reorder', function (container, item) {
-            const pos = items.indexOf(item) + 1;
-            const text = item.innerText;
-            item.classList.add("row-changed");
+    var sortable = Sortable.create(ul, {
+        handle: '.mdi-drag',
+        dataIdAttr: 'data-rownum',
+        onSort: function (evt) {
+            let changedItem = evt.item;
+            changedItem.classList.add('row-changed');
             orderingChanged = true;
-            document.getElementById("btn-save-reorder").removeAttribute("disabled");
-            console.log(`The dragon's list has been reordered, ${text} is now item ${pos} of ${items.length}`);
-        })
-        .on('grabbed', function (container, item) {
-            console.log('grabbed: ', item);
-        });*/
+            saveButton.removeAttribute('disabled');
+        }
+    });
 
     // load file
     let promise = fetch("/ordering", {
@@ -881,12 +873,10 @@ function sortPosts() {
 
         for (let line = 0; line < orderArray.length; line++) {
             let li = document.createElement("li");
-            // li.appendChild(createOrderingArrows(line));
             li.id = "row-" + line;
             li.setAttribute("data-rownum", "" + line);
             li.classList.add("sortable");
             let dragButton = document.createElement("button");
-            dragButton.setAttribute("aria-describedby", "dragon-helper");
             dragButton.classList.add("mdi", "mdi-drag");
 
             li.appendChild(dragButton);
@@ -894,20 +884,6 @@ function sortPosts() {
             ul.appendChild(li);
 
         }
-
-        console.log("sortPosts: data received: dragonDrop: ", dragonDrop);
-
-        dragonDrop
-            .on('grabbed', (container, item) => console.log(`Item ${item.innerText} grabbed`))
-            .on('dropped', (container, item) => console.log(`Item ${item.innerText} dropped`))
-            .on('reorder', (container, item) => console.log(`Reorder: ${item.innerText} has moved`))
-            .on('cancel', () => console.log('Reordering cancelled'));
-
-        console.log("sortPosts: data received: listeners added: dragonDrop: ", dragonDrop);
-
-        dragonDrop.initElements(ul);
-
-        console.log("sortPosts: data received: initElements called: dragonDrop: ", dragonDrop);
 
     }).catch((error) => {
         console.log("Fetching ordering file error: " + error);
@@ -917,39 +893,36 @@ function sortPosts() {
     showModal(modal);
 }
 
-function createOrderingArrows(lineNum) {
-    let arrowSpan = document.createElement("span");
-    arrowSpan.classList.add("sorting-arrows");
-    arrowSpan.id = "arrows-" + lineNum;
-    let upArrowSpan = document.createElement("span");
-    upArrowSpan.classList.add("mdi", "mdi-arrow-up");
-    upArrowSpan.addEventListener("click", ev => moveRowUp(lineNum));
-    let downArrowSpan = document.createElement("span");
-    downArrowSpan.classList.add("mdi", "mdi-arrow-down");
-    downArrowSpan.addEventListener("click", ev => moveRowDown(lineNum));
-    arrowSpan.appendChild(upArrowSpan);
-    arrowSpan.appendChild(downArrowSpan);
-    return arrowSpan;
-}
-
-function moveRowUp(lineNum) {
-    console.log("click up on " + lineNum);
-    let selectedRow = document.getElementById("row-" + lineNum);
-    selectedRow.classList.add("row-changed");
-    let predecessor = document.getElementById("row-" + (lineNum - 1));
-    if (predecessor != null) {
-        let parentList = selectedRow.parentNode;
-        let selectedRowNum = selectedRow.getAttribute("data-rownum")
-        selectedRow.setAttribute("data-rownum", "" + (selectedRowNum - 1));
-        predecessor.setAttribute("data-rownum", selectedRowNum);
-        parentList.removeChild(selectedRow);
-        parentList.insertBefore(selectedRow, predecessor);
+function saveNewOrder() {
+    console.log("Saving new order file");
+    console.log("New order is:");
+    let orderingList = document.getElementById("reorder-posts-ul");
+    var newOrderFileArray = [];
+    for(let item of orderingList.childNodes) {
+        newOrderFileArray.push(item.innerText + "\n");
     }
+    console.log(newOrderFileArray);
 
-}
+    popupMessage("Saving updated ordering file", STATUS.PROCESSING);
 
-function moveRowDown(lineNum) {
-    console.log("click down on " + lineNum);
+    let promise = fetch("/update-order", {
+        method: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        },
+        body: newOrderFileArray.join()
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        if (data.status === 200 || data.status === 201) {
+            popupMessage("Saved changes to order.txt", "", STATUS.OK);
+        } else {
+            popupMessage("There was a problem saving the ordering file.", "Please try again later.\nError message was:\n" + data.message, STATUS.ERROR);
+        }
+    }).catch((error) => {
+        console.log("Save and update order file error: " + error);
+        popupMessage("There was an unspecified problem saving the ordering file, please try again later.\n", error.message, STATUS.ERROR);
+    });
 }
 
 function splitOrderFile(file) {

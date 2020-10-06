@@ -4,10 +4,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 sealed class GitResponse
+	// is this really needed? Could just use FromGithub, below, instead?
+	@Serializable
+	class BasculePost(val path: String, val title: String, val layout: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>) : GitResponse()
 
-// is this really needed? Could just use FromGithub, below, instead?
-@Serializable
-class BasculePost(val path: String, val title: String, val layout: String, val body: String, val slug: String, val playlist: String, val summary: String, val composers: List<String>, val genres: List<String>) : GitResponse()
+	@Serializable
+	class ServiceError(val error: Boolean, val summary: String?, val detail: String? = "") : GitResponse()
 
 /**
  * Oh what a tangled web we weave, when first we practice to deceive...
@@ -16,9 +18,6 @@ class BasculePost(val path: String, val title: String, val layout: String, val b
 class FromGithub(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, val composers: List<String>, val genres: List<String>) {
 	var body: String? = null
 }
-
-@Serializable
-class ServiceError(val error: Boolean, val summary: String?, val detail: String? = "") : GitResponse()
 
 @Serializable
 class FromJson(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {

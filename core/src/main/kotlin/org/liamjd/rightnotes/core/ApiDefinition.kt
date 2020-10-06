@@ -139,7 +139,7 @@ val api = api<RightNotesComponents> {
 			val yamlPost = json.parse(FromJson.serializer(), postContents)
 			println("Updating ${yamlPost.path} in Github")
 
-			val appResponse = gitService.updateFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
+			val appResponse = gitService.updateMarkdownFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
 			req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(),appResponse))
 		}
 	}
@@ -263,6 +263,19 @@ val api = api<RightNotesComponents> {
 			} else {
 				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
 			}
+		}
+	}
+
+	auth(CognitoUserPoolsAuth) {
+		post("/update-order") { req ->
+			val updatedList = req.body<String>()
+			var appResponse: AppResponse
+			if(updatedList.length > 0) {
+				appResponse  = gitService.updateOrderingFile(userName = "v79", repoName = "rightnotes", path = "order.txt", data = updatedList, branchRef = "master")
+			} else {
+				appResponse = AppResponse(status = org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR,message = "Internal server error while attempting to update the ordering file")
+			}
+			appResponse
 		}
 	}
 

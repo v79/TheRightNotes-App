@@ -411,7 +411,7 @@
 			<button class="button is-danger" id="btn-cancel-reorder" onclick="closeModal('reorder-posts-modal');">
 				Cancel
 			</button>
-			<button class="button is-normal" id="btn-save-reorder" disabled>
+			<button class="button is-primary is-pulled-right" id="btn-save-reorder" disabled onclick="saveNewOrder();">
 				Save changes
 			</button>
 		</footer>
@@ -504,6 +504,7 @@
         }
     });
 </script>
-<script src="https://unpkg.com/drag-on-drop"></script> <!-- Dragon Drop library for sorting -->
+<!--<script src="https://unpkg.com/drag-on-drop"></script> --><!-- Dragon Drop library for sorting -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script> <!-- sortable library for drag & drop -->
 </body>
 </html>
