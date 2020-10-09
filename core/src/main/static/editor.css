@@ -65,10 +65,16 @@ modal-card-foot {
 
 /* file sorting dialog */
 .sortable {
-	font-size: small;
+	font-size: inherit;
 }
 
 .sortable.row-changed {
 	color: darkgreen;
+}
+
+.drag-handle {
+	background-color: white;
+	padding: 3px;
+	border: none;
 }
 

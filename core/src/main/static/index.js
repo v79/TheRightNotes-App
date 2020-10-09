@@ -839,13 +839,19 @@ function saveAndUpdate() {
 
 }
 
+/**
+ * load the ordering file as a list and make it re-ordable using the 'Sortable' library
+ */
 function sortPosts() {
     let modal = document.getElementById("reorder-posts-modal");
     var orderingChanged = false;
     let saveButton = document.getElementById("btn-save-reorder");
     let ul = document.getElementById("reorder-posts-ul");
+    // clear existing list
+    while (ul.firstChild) { ul.removeChild(ul.firstChild); }
+    saveButton.setAttribute('disabled',"disabled");
 
-    var sortable = Sortable.create(ul, {
+    let sortable = Sortable.create(ul, {
         handle: '.mdi-drag',
         dataIdAttr: 'data-rownum',
         onSort: function (evt) {
@@ -877,28 +883,29 @@ function sortPosts() {
             li.setAttribute("data-rownum", "" + line);
             li.classList.add("sortable");
             let dragButton = document.createElement("button");
-            dragButton.classList.add("mdi", "mdi-drag");
+            dragButton.classList.add("mdi", "mdi-drag","drag-handle");
 
             li.appendChild(dragButton);
             li.appendChild(document.createTextNode(orderArray[line]));
             ul.appendChild(li);
-
         }
-
     }).catch((error) => {
         console.log("Fetching ordering file error: " + error);
-        popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + error, STATUS.ERROR);
+        // popupMessage("There was a problem opening the ordering file. Please try again later.\nError message was:\n" + error, STATUS.ERROR);
     })
 
     showModal(modal);
 }
 
+/**
+ * Persist the updated order file by retrieving all elements
+ */
 function saveNewOrder() {
     console.log("Saving new order file");
     console.log("New order is:");
     let orderingList = document.getElementById("reorder-posts-ul");
-    var newOrderFileArray = [];
-    for(let item of orderingList.childNodes) {
+    let newOrderFileArray = [];
+    for(let item of orderingList.querySelectorAll('li')) {
         newOrderFileArray.push(item.innerText + "\n");
     }
     console.log(newOrderFileArray);
@@ -910,7 +917,7 @@ function saveNewOrder() {
         headers: {
             'Authorization': 'Bearer ' + authToken
         },
-        body: newOrderFileArray.join()
+        body: newOrderFileArray.join("")
     }).then((response) => {
         return response.json();
     }).then((data) => {
@@ -959,10 +966,18 @@ function unhide(elementId) {
     }
 }
 
+/**
+ * Show the given modal by adding the 'is-active' class
+ * @param modal
+ */
 function showModal(modal) {
     modal.classList.add("is-active");
 }
 
+/**
+ * Close the given modal by removing the 'is-active' class
+ * @param modalName
+ */
 function closeModal(modalName) {
     let element = document.getElementById(modalName);
     element.classList.remove("is-active");

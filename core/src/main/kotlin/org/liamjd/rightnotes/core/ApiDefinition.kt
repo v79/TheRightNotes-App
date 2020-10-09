@@ -26,6 +26,7 @@ private val DRAFT = "__"
 val api = api<RightNotesComponents> {
 
 	val SPOTIFY_SECRET = System.getenv("SPOTIFY_SECRET")
+	val json = Json(JsonConfiguration.Stable)
 
 	staticFiles {
 		path = "/"
@@ -89,7 +90,7 @@ val api = api<RightNotesComponents> {
 			val fileToLoad = req.body<String>()
 			println("Loading markdown file $fileToLoad")
 			val gitResponse: GitResponse = gitService.loadMarkdownFile("v79", "rightnotes", fileToLoad, "master")
-			when(gitResponse) {
+			when (gitResponse) {
 				is BasculePost -> {
 					if (gitResponse.path.isNotEmpty()) {
 						val json = Json(JsonConfiguration.Stable)
@@ -100,7 +101,7 @@ val api = api<RightNotesComponents> {
 					}
 				}
 				is ServiceError -> {
-					val errorJson =  mapOf("summary" to gitResponse.summary,"detail" to gitResponse.detail)
+					val errorJson = mapOf("summary" to gitResponse.summary, "detail" to gitResponse.detail)
 					req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR).build(errorJson)
 				}
 			}
@@ -135,12 +136,12 @@ val api = api<RightNotesComponents> {
 	auth(CognitoUserPoolsAuth) {
 		post("/save-and-update") { req ->
 			val postContents = req.body<String>()
-			val json = Json(JsonConfiguration.Stable)
+
 			val yamlPost = json.parse(FromJson.serializer(), postContents)
 			println("Updating ${yamlPost.path} in Github")
 
 			val appResponse = gitService.updateMarkdownFile("v79", "rightnotes", "${yamlPost.path}", "master", yamlPost)
-			req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(),appResponse))
+			req.responseBuilder().status(appResponse.status).build(json.stringify(AppResponse.serializer(), appResponse))
 		}
 	}
 
@@ -255,25 +256,35 @@ val api = api<RightNotesComponents> {
 		}
 	}
 
+	/**
+	 * Retrieve the 'order.txt' file
+	 */
 	auth(CognitoUserPoolsAuth) {
 		get("/ordering") { req ->
 			val orderFile = gitService.loadOrderFile("v79", "rightnotes", "order.txt", "master")
-			if(orderFile.length > 0 ) {
-				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type","text/plain").build(orderFile)
+			var appResponse: AppResponse
+			if (orderFile.length > 0) {
+				appResponse = AppResponse(status = HttpStatus.SC_OK, mimeType = "text/plain", body = orderFile)
+//				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(orderFile)
 			} else {
-				req.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+				appResponse = AppResponse(status = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = "Error fetching the order file; perhaps it does not exist?")
+//				req.returnTextError("Error fetching the order file; perhaps it does not exist?")
 			}
+			req.responseBuilder().status(appResponse.status).header("Content-Type",appResponse.mimeType).build(if(appResponse.body != null) appResponse.body else json.stringify(AppResponse.serializer(),appResponse))
 		}
 	}
 
+	/**
+	 * Updated 'order.txt' file received in body of post
+	 */
 	auth(CognitoUserPoolsAuth) {
 		post("/update-order") { req ->
 			val updatedList = req.body<String>()
 			var appResponse: AppResponse
-			if(updatedList.length > 0) {
-				appResponse  = gitService.updateOrderingFile(userName = "v79", repoName = "rightnotes", path = "order.txt", data = updatedList, branchRef = "master")
+			if (updatedList.length > 0) {
+				appResponse = gitService.updateOrderingFile(userName = "v79", repoName = "rightnotes", path = "order.txt", data = updatedList, branchRef = "master")
 			} else {
-				appResponse = AppResponse(status = org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR,message = "Internal server error while attempting to update the ordering file")
+				appResponse = AppResponse(status = org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR, message = "Internal server error while attempting to update the ordering file")
 			}
 			appResponse
 		}
@@ -281,6 +292,10 @@ val api = api<RightNotesComponents> {
 
 }
 
+/**
+ * Extension function to clean up a file name, replacing spaces with "-"
+ * and converting to TitleCase
+ */
 private fun String.cleanUp(): String {
 	val WORD_SEPARATOR = "-"
 	val leaf = this.substringBeforeLast(".").replace(" ", WORD_SEPARATOR)
@@ -290,11 +305,18 @@ private fun String.cleanUp(): String {
 	return titleCase
 }
 
+/**
+ * Extension function to return plain text
+ */
 private fun Request.returnHtml(body: String) =
 		this.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/html").build(body)
 
+/**
+ * Extension function to return an error as plain text
+ */
 private fun Request.returnTextError(body: String) =
-		this.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR).header("Content-Type","text/plain").build(body)
+		this.responseBuilder().status(HttpStatus.SC_INTERNAL_SERVER_ERROR).header("Content-Type", "text/plain").build(body)
+
 
 interface RightNotesComponents : ComponentsProvider {
 	val gitService: GitService
@@ -320,6 +342,6 @@ class RightNotesLocalImpl : RightNotesComponents {
 }
 
 fun createComponents(): RightNotesComponents = RightNotesComponentsImpl()
-fun createLocalComponents() : RightNotesComponents = RightNotesLocalImpl() // when running locally, not on AWS
+fun createLocalComponents(): RightNotesComponents = RightNotesLocalImpl() // when running locally, not on AWS
 
 
