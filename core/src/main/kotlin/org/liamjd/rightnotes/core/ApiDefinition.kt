@@ -118,7 +118,6 @@ val api = api<RightNotesComponents> {
 			val postContents = req.body<String>()
 			val json = Json(JsonConfiguration.Stable)
 			val yamlPost = json.parse(FromJson.serializer(), postContents)
-			println(yamlPost)
 			// need to sanitise the file name?
 			// prepending "__" makes it a draft file
 			val fileName = DRAFT + yamlPost.title.replace(Regex("\\W"), " ").trim() + ".md"
@@ -261,12 +260,14 @@ val api = api<RightNotesComponents> {
 	 */
 	auth(CognitoUserPoolsAuth) {
 		get("/ordering") { req ->
+			println("Loading post ordering file order.txt")
 			val orderFile = gitService.loadOrderFile("v79", "rightnotes", "order.txt", "master")
 			var appResponse: AppResponse
 			if (orderFile.length > 0) {
 				appResponse = AppResponse(status = HttpStatus.SC_OK, mimeType = "text/plain", body = orderFile)
 //				req.responseBuilder().status(HttpStatus.SC_OK).header("Content-Type", "text/plain").build(orderFile)
 			} else {
+				println("Error fetching the order file; perhaps it does not exist?")
 				appResponse = AppResponse(status = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = "Error fetching the order file; perhaps it does not exist?")
 //				req.returnTextError("Error fetching the order file; perhaps it does not exist?")
 			}
@@ -280,10 +281,12 @@ val api = api<RightNotesComponents> {
 	auth(CognitoUserPoolsAuth) {
 		post("/update-order") { req ->
 			val updatedList = req.body<String>()
+			println("Updating ordering file order.txt with ${updatedList.substring(0..100)}")
 			var appResponse: AppResponse
 			if (updatedList.length > 0) {
 				appResponse = gitService.updateOrderingFile(userName = "v79", repoName = "rightnotes", path = "order.txt", data = updatedList, branchRef = "master")
 			} else {
+				println("Internal server error while attempting to update the ordering file")
 				appResponse = AppResponse(status = org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR, message = "Internal server error while attempting to update the ordering file")
 			}
 			appResponse

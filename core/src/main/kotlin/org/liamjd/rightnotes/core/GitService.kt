@@ -240,6 +240,7 @@ class GitService : ComponentsProvider {
 	 * Load a text file with the given [path]
 	 */
 	private fun loadTextFile(userName: String, repoName: String, path: String, branchRef: String): String {
+		println("GitService: loadTextFile: $userName, $repoName, $path, $branchRef")
 		val github = GitHub.connectUsingOAuth(GIT_AUTH_TOKEN)
 		val repo = github.getRepository("$userName/$repoName")
 		val content = repo.getFileContent(path, branchRef)

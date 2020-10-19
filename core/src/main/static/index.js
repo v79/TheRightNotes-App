@@ -35,7 +35,7 @@ function authenticate() {
                     `redirect_uri=https://api.therightnotes.org/&client_id=${data.cognitoClientId}&` +
                     `response_type=token&scope=email+openid+phone+profile`;
                 authToken = parseIdToken();
-                console.log(`idToken (authToken): ${authToken}`);
+                // console.log(`idToken (authToken): ${authToken}`);
                 if (authToken) {
                     console.log("Authenticated successfully");
                     loadFileList();
@@ -866,7 +866,7 @@ function sortPosts() {
     let promise = fetch("/ordering", {
         method: "GET",
         headers: {
-            'Authorization': 'Bearer' + authToken
+            'Authorization': 'Bearer ' + authToken
         }
     }).then((response) => {
         if (response.status !== 200) {
