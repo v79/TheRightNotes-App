@@ -35,6 +35,12 @@ figcaption {
 	cursor: pointer;
 }
 
+#file-list {
+	max-height: 300px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
 /*  image gallery upload */
 #image-upload-drop-area {
 	border: 2px dashed #ccc;

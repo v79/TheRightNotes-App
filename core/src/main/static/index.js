@@ -750,6 +750,11 @@ function saveNewFile(newPostForm) {
     let formData = new FormData(form);
     let playlist = formData.get("playlist");
     const playlistPrefix = "spotify:playlist:";
+    const playlistWrongPrefix = "https://open.spotify.com/playlist/";
+    // sometimes we're given the playlist in the wrong format; attempt to extract the correct one
+    if(playlist.startsWith(playlistWrongPrefix)) {
+        playlist = playlist.substring(playlistWrongPrefix.length)
+    }
     if (playlist.startsWith(playlistPrefix)) {
         playlist = playlist.substring(playlistPrefix.length);
         formData.delete("playlist");

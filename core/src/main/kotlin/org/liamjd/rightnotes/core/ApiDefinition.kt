@@ -60,7 +60,7 @@ val api = api<RightNotesComponents> {
 		get("/post-list") { req ->
 			val repoFiles = gitService.getPostList("v79", "rightnotes", "sources", "master")
 			val postList = createHTMLDocument().ul {
-				repoFiles.forEach { sourceFile ->
+				repoFiles.sortedBy { ghSourceFile ->  ghSourceFile.name }.reversed().forEach { sourceFile ->
 					val kb = if (sourceFile.fileSize != null) sourceFile.fileSize / 1024 else 0L
 					li("file") {
 						span(classes = "post-list-item") {
