@@ -382,7 +382,7 @@
     };
 
     /**
-     * Called when a drop event occurs
+     * Called when a drop event occurs - this is how we handle adding images to the markdown file
      * @param  {Event} e
      * @return {Boolean} if the event was handled
      */
@@ -390,8 +390,11 @@
         e.preventDefault(); // otherwise the normal textarea drop behaviour will happen
         const data = e.dataTransfer.getData("text/uri-list");
         let relativeUrl = data.replace(/.*\/\/[^\/]*/, '');
-        let title = data.substring(data.lastIndexOf("/"));
-        createCustomMarkdown(this.editor.codeMirror, false, ["\n![" + title, "](" + relativeUrl + "){.image .is-pulled-left}\n"], "")
+        let fileLeaf = data.substring(data.lastIndexOf("/")); // get "/File-Name.png"
+        let title = fileLeaf.substring(1,fileLeaf.lastIndexOf(".")).replaceAll("-"," "); // convert to "File Name"
+        let styling = "{.image .is-pulled-left}"
+        // createImageMarkdown(title,relativeUrl,styling)
+        createCustomMarkdown(this.editor.codeMirror, false, ["\n![" + title, "](" + relativeUrl + ' "' + title + '"' + "){.image .is-pulled-left}\n"], "")
         return true;
     };
 

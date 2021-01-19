@@ -23,6 +23,9 @@ class FromGithub(val title: String, val layout: String, val slug: String, val pl
 @Serializable
 class FromJson(val title: String, val layout: String, val slug: String, val playlist: String?, val summary: String?, @SerialName("composers[]") val composers: List<String>?, @SerialName("genres[]") val genres: List<String>?, val body: String?, val path: String?) {
 
+	/**
+	 * Convert the JSON received from the web page into a plain markdown text file
+	 */
 	fun toMarkdown(): String {
 		val sb = StringBuilder()
 		sb.appendln("---")
@@ -35,7 +38,7 @@ class FromJson(val title: String, val layout: String, val slug: String, val play
 
 		sb.append("genres: [")
 		genres?.forEachIndexed { i, g ->
-			sb.append(g)
+			sb.append(g.toLowerCase())
 			if (i != genres.size - 1) {
 				sb.append(",")
 			}

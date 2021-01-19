@@ -8,6 +8,7 @@ let initialGalleryElement;
 let tracklist;
 let spotifyToken;
 let authToken;
+
 /**
  * On document load activities to populate file list and image gallery.
  * Fetches spotify auth token
@@ -16,7 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
     authenticate();
 });
 
-// set up authentication
+/**
+ * Set up authentication via AWS and Spotify
+ */
 function authenticate() {
 
     let promise = fetch("/preauth", {
@@ -49,28 +52,12 @@ function authenticate() {
             }
         })
         .catch(error => console.log(error))
-    // let awsAccountId = '086949310404';
-    // let awsRegion = 'eu-west-2';
-    // let cognitoClientId = 'urfqo0jeeh54d5mi1rf70cfmk';
-    // let apiId = 'ru93q91hc7';
-    //
-    // let loginUrl = `https://therightnotes-api-${awsAccountId}.auth.${awsRegion}.amazoncognito.com/login?` +
-    //     `redirect_uri=https://api.therightnotes.org/&client_id=${cognitoClientId}&` +
-    //     `response_type=token&scope=email+openid+phone+profile`;
-    //
-    // authToken = parseIdToken();
-    // console.log(`idToken (authToken): ${authToken}`);
-    //
-    // if (authToken) {
-    //     // document.getElementById('msg').innerText = 'Logged in';
-    //     // document.getElementById('requestButton').disabled = false;
-    //     return;
-    // }
-    // // not logged in - redirect to login page
-    // console.log(`not logged in, redirecting to ${loginUrl}`);
-    // window.location = loginUrl;
 }
 
+/**
+ * Oarse the ID token from the AWS cognito URL
+ * @returns {string|null}
+ */
 function parseIdToken() {
     if (window.location.hash) {
         let hash = window.location.hash.substr(1);
@@ -84,7 +71,7 @@ function parseIdToken() {
 }
 
 /**
- * Load complete list of markdown source files and update the dom element
+ * Load complete list of markdown source files and update the fileList DOM element
  */
 function loadFileList() {
     const fileListDom = document.querySelector("#file-list");
@@ -99,9 +86,9 @@ function loadFileList() {
         .then(data => updateElement(fileListDom, data));
 }
 
-/**
+/****************************************
  * Image gallery
- */
+ ****************************************/
 
 /**
  * Load JSON representing the composer portrait gallery
@@ -215,7 +202,7 @@ function dragstart_handler(ev) {
     // Change the source element's background color to signify drag has started
     // Add the id of the drag source element to the drag data payload so
     // it is available when the drop event is fired
-    var dt = ev.dataTransfer;
+    const dt = ev.dataTransfer;
     dt.setData("text/uri-list", ev.target.src);
     // Tell the browser both copy and move are possible
     ev.effectAllowed = "link";
@@ -232,7 +219,7 @@ function drop_handler(ev) {
     ev.preventDefault();
     // Get the id of drag source element (that was added to the drag data
     // payload by the dragstart event handler)
-    var id = ev.dataTransfer.getData("text/uri-list");
+    const id = ev.dataTransfer.getData("text/uri-list");
     ev.target.style.background = "";
     ev.target.innerText = id;
 }
@@ -243,7 +230,7 @@ function dragend_handler(ev) {
     ev.dataTransfer.clearData();
 }
 
-/**
+/**********************
  * Enums
  */
 const STATUS = {
@@ -432,7 +419,7 @@ class MarkdownFile {
 }
 
 
-/**
+/**********************
  * Global data set up
  */
 let newPostBasics = new WizardPage("new-post-basics", "new-post-basics");
@@ -444,7 +431,7 @@ var markdownFile = null;
 const dropArea = document.getElementById("image-upload-drop-area");
 
 
-/**
+/*************************
  * button actions
  */
 
@@ -492,6 +479,12 @@ function loadMarkdownFile(fileName) {
         })
 }
 
+/**
+ * Populate the markdown editor component with the JSON supplied in the {data} object.
+ * Populate the metadata fields from the parsed mdObject
+ * @param data
+ * @param disabled
+ */
 function updateMarkdownEditor(data, disabled) {
     const form = document.getElementById("form-md");
     const formElements = form.elements;
@@ -533,6 +526,9 @@ function updateMarkdownEditor(data, disabled) {
     return loadedFile;
 }
 
+/**
+ * Open the New File modal wizard
+ */
 function newFile() {
     newFileWizard.clear();
     const newPostModal = document.getElementById("new-post-modal");
@@ -565,6 +561,10 @@ function uploadPortrait() {
     }
 }
 
+/**
+ * For each uploaded image file, upload it and then preview it
+ * @param files
+ */
 function handleFiles(files) {
     files = [...files];
     files.forEach(uploadFile);
@@ -576,14 +576,26 @@ function preventDefaults(e) {
     e.stopPropagation();
 }
 
+/**
+ * Add a highlight to the image drop area
+ * @param e
+ */
 function highlight(e) {
     dropArea.classList.add("highlight");
 }
 
+/**
+ * Remove the highlight from the image drop area
+ * @param e
+ */
 function unhighlight(e) {
     dropArea.classList.remove("highlight");
 }
 
+/**
+ * Trigger the {file} upload by doing a POST request
+ * @param file
+ */
 function uploadFile(file) {
     // disable cancel button
     document.getElementById("btn-cancel-image-upload").disabled = true;
@@ -615,6 +627,10 @@ function uploadFile(file) {
         })
 }
 
+/**
+ * Having uploaded the image {file}, display it in the modal for preview purposes
+ * @param file
+ */
 function previewFile(file) {
     let reader = new FileReader();
     const preview = document.getElementById("upload-preview");
@@ -630,6 +646,9 @@ function previewFile(file) {
     }
 }
 
+/**
+ * Reset the iamge upload modal, ready for the next time
+ */
 function resetUploadModal() {
     const previewElem = document.getElementById("upload-preview");
     while (previewElem.firstChild) {
@@ -660,12 +679,17 @@ function getSpotifyToken() {
         });
 }
 
+/**
+ * Display/hide the track listing menu
+ */
 function toggleTrackList() {
     const dropdownElement = document.getElementById("tracks-list-dropdown");
     dropdownElement.classList.toggle("is-active");
 }
 
-
+/**
+ * Fetch the spotify playlist and build the track list menu
+ */
 function getPlaylistTracks() {
     const trackListingDiv = document.getElementById("track-listing-container");
     const playlistId = document.getElementById("form-meta-playlist").value;
@@ -688,6 +712,11 @@ function getPlaylistTracks() {
         }));
 }
 
+/**
+ * Build the hTML for the track listing menu into the given div
+ * @param trackListingDiv
+ * @param trackItems
+ */
 function buildTrackListing(trackListingDiv, trackItems) {
     const newTrackListingDiv = document.createElement("div");
     const oldListing = document.getElementById("tmp-track-listing");
@@ -730,12 +759,25 @@ function buildTrackListing(trackListingDiv, trackItems) {
     }
 }
 
+/**
+ * When a track item is clicked on, copy its contents to the clipboard
+ * @param elementName
+ */
 function copyToClipboard(elementName) {
     const valueToCopy = document.getElementById(elementName);
     valueToCopy.select();
     document.execCommand("copy");
 }
 
+
+/*****************
+ * File handling routines
+ */
+
+/**
+ * Generate a slug/url for the given programme name, replacing non-word characters with a - and converting to lowercase
+ * @param elementToUpdate
+ */
 function generateSlug(elementToUpdate) {
     const newFormTitle = document.getElementById("new-post-title");
     const newFormSlug = document.getElementById("new-post-slug");
@@ -745,6 +787,10 @@ function generateSlug(elementToUpdate) {
     document.getElementById(elementToUpdate).innerText = slug;
 }
 
+/**
+ * Process the data supplied in the New File wizard and create the new markdown file on the server
+ * @param newPostForm the form contents from the file wizard
+ */
 function saveNewFile(newPostForm) {
     let form = document.getElementById(newPostForm);
     let formData = new FormData(form);
@@ -795,9 +841,11 @@ function saveNewFile(newPostForm) {
             console.log("Error creating file " + response.status);
         }
     }).finally((() => newFileWizard.clear()));
-    //.finally((data) => window.location.replace("/"));
 }
 
+/**
+ * The function does not work on the back end yet
+ */
 function releaseDraft() {
     console.log("Attempting to release draft file " + markdownFile.filename + " which is draft: " + markdownFile.isDraft);
     let promise = fetch("/release-from-draft", {
@@ -809,6 +857,9 @@ function releaseDraft() {
     }).finally((data) => window.location.replace("/"));
 }
 
+/**
+ * Save the updated markdown file and meta data to the server
+ */
 function saveAndUpdate() {
     popupMessage("Saving...", "", STATUS.PROCESSING);
     let mdeContent = simplemde.value();
@@ -937,17 +988,27 @@ function saveNewOrder() {
     });
 }
 
+/**
+ * the order file needs to be turned into an array
+ * @param file
+ * @returns {*|string[]}
+ */
 function splitOrderFile(file) {
     return file.split("\n");
 }
 
-/**
+/********************************
  * General DOM helper methods
+ */
+
+/**
+ * Update the HTML for the given element
+ * @param domElement
+ * @param html
  */
 function updateElement(domElement, html) {
     domElement.innerHTML = html;
 }
-
 
 /**
  * Hide an element with the given ID (will getElementById)
@@ -988,6 +1049,12 @@ function closeModal(modalName) {
     element.classList.remove("is-active");
 }
 
+/**
+ * Display a pop-up message on screen
+ * @param messageText summary of the message
+ * @param messageDetail full details of the message
+ * @param status the status of the message, such as ERROR or PROCESSING. Used to display an icon
+ */
 function popupMessage(messageText, messageDetail, status) {
     closeAllModals()
     const modal = document.getElementById("generic-info-modal");
@@ -1021,6 +1088,9 @@ function popupMessage(messageText, messageDetail, status) {
     showModal(modal);
 }
 
+/**
+ * Close all open modal dialogs
+ */
 function closeAllModals() {
     let existingModals = document.querySelectorAll(".modal");
     for (let existingModal of existingModals) {
@@ -1096,6 +1166,12 @@ function createCustomMarkdown(cm, active, startEnd, url) {
     }
     cm.setSelection(startPoint, endPoint);
     cm.focus();
+}
+//TODO: write a more generic custom markdown function
+// createImageMarkdown(title,relativeUrl,styling)
+//         createCustomMarkdown(this.editor.codeMirror, false, ["\n![" + title, "](" + relativeUrl + ' "' + title + '"' + "){.image .is-pulled-left}\n"], "")
+function createImageMarkdown(title, relativeUrl, styling) {
+    //createCustomMarkdown(this.editor.codeMirror, false, ["\n![" + title, "](" + relativeUrl + ' "' + title + '"' + "){.image .is-pulled-left}\n"], "")
 }
 
 function createSpotifyLinks() {
